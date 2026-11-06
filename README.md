@@ -40,6 +40,10 @@ API URL: `http://localhost:8000/api/v1/health`
 
 Mailpit dashboard: `http://localhost:8025`
 
+API documentation: [Phase 1 API reference](docs/api/phase-1-api-reference.md)
+
+Submission runbook: [Backend checklist](docs/submission/backend-checklist.md)
+
 ## Quality checks
 
 ```powershell
@@ -58,6 +62,6 @@ docker compose --profile test stop mysql-test
 
 The test database stores its data in container `tmpfs`; it does not use the persistent development volume.
 
-Architecture notes: [Phase 3 domain schema](docs/architecture/phase-03-domain-schema.md) and [Phase 4 identity and access](docs/architecture/phase-04-identity-access.md).
+Architecture notes: [Phase 3 domain schema](docs/architecture/phase-03-domain-schema.md), [Phase 4 identity and access](docs/architecture/phase-04-identity-access.md), [Phase 5 category/brand management](docs/architecture/phase-05-category-brand-management.md), [Phase 6 product/variant/media](docs/architecture/phase-06-product-variant-media.md), and [Phase 7 public catalog](docs/architecture/phase-07-public-catalog.md).
 
 # beauty_ecomerce_platform
