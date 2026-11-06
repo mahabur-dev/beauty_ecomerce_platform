@@ -12,11 +12,16 @@ administration application will remain independently deployable.
 - TypeScript strict mode with additional index, optional-property, casing, and
   switch-safety checks
 - Tailwind CSS 4 with semantic CSS design tokens
+- Locally hosted Inter variable font with no browser or build-time CDN dependency
 - TanStack Query for interactive server-state coordination
 - Zod for runtime boundary validation
 - Native `fetch` behind one typed API client
 - Vitest, React Testing Library, and V8 coverage
 - ESLint and Prettier with Tailwind class ordering
+
+Development uses the default Turbopack server. Production builds use Next.js's
+documented Webpack fallback so the assignment also builds in restricted CI
+environments where Turbopack cannot bind its internal stylesheet worker port.
 
 ## Module boundaries
 
@@ -42,11 +47,11 @@ phase.
 ## Configuration and security
 
 `.env.example` documents public build-time configuration. The runtime parser
-validates URL and name shapes and provides assignment-friendly local defaults.
-No secret is exposed through a `NEXT_PUBLIC_` key. Next.js removes the powered-by
-header and adds baseline anti-sniffing, anti-framing, referrer, and browser
-permission policies. Cloudinary's HTTPS delivery host is the only configured
-remote image origin.
+validates URL and name shapes, provides assignment-friendly local defaults, and
+requires explicit URLs for production builds. No secret is exposed through a
+`NEXT_PUBLIC_` key. Next.js removes the powered-by header and adds baseline
+anti-sniffing, anti-framing, referrer, and browser permission policies.
+Cloudinary's HTTPS delivery host is the only configured remote image origin.
 
 ## Design readiness
 

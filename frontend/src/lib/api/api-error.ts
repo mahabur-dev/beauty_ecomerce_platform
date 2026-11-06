@@ -11,3 +11,20 @@ export class ApiError extends Error {
     this.problem = problem;
   }
 }
+
+export class ApiNetworkError extends Error {
+  constructor(cause: unknown) {
+    super("The API could not be reached.", { cause });
+    this.name = "ApiNetworkError";
+  }
+}
+
+export class ApiResponseError extends Error {
+  readonly status: number;
+
+  constructor(status: number, cause: unknown) {
+    super("The API returned an invalid JSON response.", { cause });
+    this.name = "ApiResponseError";
+    this.status = status;
+  }
+}

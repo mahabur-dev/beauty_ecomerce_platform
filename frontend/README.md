@@ -20,13 +20,16 @@ npm run dev
 
 The storefront runs at `http://localhost:3000`. Environment files belong in
 this directory because Next.js does not load them from `src/`.
+Local development uses documented localhost defaults when these variables are
+absent. Production builds require both public URL variables to be configured so
+a deployment cannot silently target localhost.
 
 ## Commands
 
 | Command                 | Purpose                                               |
 | ----------------------- | ----------------------------------------------------- |
 | `npm run dev`           | Start the local Turbopack development server          |
-| `npm run build`         | Create a production build                             |
+| `npm run build`         | Create a portable Webpack production build            |
 | `npm run lint`          | Run ESLint with zero-warning enforcement              |
 | `npm run typecheck`     | Generate route types and run strict TypeScript checks |
 | `npm run test`          | Run the Vitest suite once                             |
@@ -39,6 +42,7 @@ this directory because Next.js does not load them from `src/`.
 ```text
 src/
   app/          Routes, layouts, providers, and route-level boundaries
+  components/   Shared UI primitives, feedback states, and application shell
   config/       Validated environment and application metadata
   features/     Business capabilities such as catalog, auth, and cart
   lib/          Framework-agnostic API, query, and utility infrastructure
@@ -61,3 +65,12 @@ Rules:
 
 The Laravel API reference is at
 [`../docs/api/phase-1-api-reference.md`](../docs/api/phase-1-api-reference.md).
+
+## Customer authentication
+
+Customer authentication uses Laravel Sanctum's HttpOnly session cookie. The
+frontend never stores access tokens in browser storage. Ensure the backend's
+`SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, and `CORS_ALLOWED_ORIGINS` values
+include the storefront host. See the
+[Phase 3 authentication architecture](../docs/architecture/frontend-phase-03-authentication.md)
+for the complete flow and local backend settings.

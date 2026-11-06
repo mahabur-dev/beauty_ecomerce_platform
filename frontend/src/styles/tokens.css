@@ -1,29 +1,29 @@
 :root {
   color-scheme: light;
 
-  --brand-50: #fff1f6;
-  --brand-100: #ffe2ec;
-  --brand-200: #ffc4d8;
-  --brand-300: #ff96b8;
-  --brand-400: #fb6394;
-  --brand-500: #ed3978;
-  --brand-600: #d91f63;
-  --brand-700: #b71450;
-  --brand-800: #971345;
-  --brand-900: #7e153f;
+  --brand-50: #fff4f7;
+  --brand-100: #ffe7ee;
+  --brand-200: #ffc9d8;
+  --brand-300: #ff9fbb;
+  --brand-400: #f75f91;
+  --brand-500: #ec2f72;
+  --brand-600: #df1f63;
+  --brand-700: #bd174f;
+  --brand-800: #97133f;
+  --brand-900: #711231;
 
-  --surface-page: #fffafb;
+  --surface-page: #fffdfd;
   --surface-elevated: #ffffff;
-  --surface-subtle: #fff4f7;
-  --ink: #171522;
-  --ink-muted: #686270;
-  --line: #f2dfe6;
+  --surface-subtle: #fff7f9;
+  --ink: #111326;
+  --ink-muted: #66616b;
+  --line: #f3dde5;
 
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --shape-radius-sm: 0.5rem;
+  --shape-radius-md: 0.75rem;
+  --shape-radius-lg: 1rem;
+  --shape-radius-xl: 1.5rem;
 
-  --shadow-soft: 0 1rem 3rem rgb(126 21 63 / 8%);
+  --shadow-soft: 0 0.75rem 2.5rem rgb(151 19 63 / 8%);
   --content-max: 80rem;
 }
