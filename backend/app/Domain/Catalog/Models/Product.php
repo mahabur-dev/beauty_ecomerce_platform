@@ -17,6 +17,9 @@ final class Product extends Model
     /** @use HasFactory<ProductFactory> */
     use HasFactory, SoftDeletes;
 
+    /** @var array<string, mixed> */
+    protected $attributes = ['status' => 'draft'];
+
     /** @var list<string> */
     protected $fillable = [
         'brand_id',

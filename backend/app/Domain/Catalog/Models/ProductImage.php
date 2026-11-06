@@ -14,8 +14,8 @@ final class ProductImage extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'product_variant_id', 'storage_disk', 'storage_path', 'asset_id', 'delivery_type',
-        'format', 'bytes', 'width', 'height', 'alt_text', 'sort_order', 'is_primary',
+        'product_variant_id', 'storage_disk', 'storage_path', 'asset_id', 'resource_type', 'delivery_type',
+        'secure_url', 'format', 'bytes', 'width', 'height', 'alt_text', 'sort_order', 'is_primary',
     ];
 
     /** @return BelongsTo<Product, $this> */

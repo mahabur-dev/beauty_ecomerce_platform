@@ -14,6 +14,9 @@ final class ProductVariant extends Model
     /** @use HasFactory<ProductVariantFactory> */
     use HasFactory;
 
+    /** @var array<string, mixed> */
+    protected $attributes = ['is_default' => false, 'is_active' => true];
+
     /** @var list<string> */
     protected $fillable = ['sku', 'barcode', 'title', 'price', 'compare_at_price', 'cost_price', 'is_default', 'is_active'];
 

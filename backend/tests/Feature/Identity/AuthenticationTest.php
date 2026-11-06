@@ -10,6 +10,7 @@ use App\Domain\Identity\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -25,6 +26,7 @@ final class AuthenticationTest extends TestCase
     {
         parent::setUp();
 
+        Cache::clear();
         $this->seed(RoleSeeder::class);
         $this->app->instance(TotpAuthenticator::class, new DeterministicTotpAuthenticator);
         Notification::fake();

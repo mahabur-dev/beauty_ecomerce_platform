@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Domain\Identity\Contracts\TotpAuthenticator;
 use App\Domain\Identity\Services\OtpPhpTotpAuthenticator;
+use App\Domain\Media\Contracts\MediaStorage;
+use App\Infrastructure\Media\CloudinaryMediaStorage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(TotpAuthenticator::class, OtpPhpTotpAuthenticator::class);
+        $this->app->bind(MediaStorage::class, CloudinaryMediaStorage::class);
     }
 
     /**
