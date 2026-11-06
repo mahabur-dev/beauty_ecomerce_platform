@@ -1,6 +1,11 @@
 <?php
 
+use App\Domain\Identity\Exceptions\IdentityRuleException;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureAdministrator;
+use App\Http\Middleware\EnsureAdminMfa;
+use App\Http\Middleware\EnsurePendingAdministrator;
+use App\Http\Middleware\EnsureRole;
 use App\Http\Responses\ProblemDetailsResponseFactory;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -22,6 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->append(AssignRequestId::class);
+        $middleware->alias([
+            'admin' => EnsureAdministrator::class,
+            'admin.mfa' => EnsureAdminMfa::class,
+            'admin.pending' => EnsurePendingAdministrator::class,
+            'role' => EnsureRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -39,6 +50,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 title: 'Validation failed',
                 detail: 'One or more fields contain invalid data.',
                 extensions: ['errors' => $exception->errors()],
+            );
+        });
+
+        $exceptions->render(function (IdentityRuleException $exception, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return app(ProblemDetailsResponseFactory::class)->make(
+                request: $request,
+                status: $exception->status,
+                title: $exception->title,
+                detail: $exception->getMessage(),
             );
         });
 

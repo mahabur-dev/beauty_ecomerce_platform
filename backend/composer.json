@@ -9,7 +9,8 @@
         "php": "^8.3",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.3",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "spomky-labs/otphp": "^11.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -47,8 +48,9 @@
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
-            "@php artisan test"
+            "DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test"
         ],
+        "test:integration:mysql": "DB_CONNECTION=mysql DB_HOST=mysql-test DB_PORT=3306 DB_DATABASE=beauty_commerce_test DB_USERNAME=beauty_test DB_PASSWORD=local-test-only vendor/bin/phpunit --configuration=phpunit.mysql.xml",
         "format": "pint",
         "format:check": "pint --test",
         "analyse": "phpstan analyse --no-progress --memory-limit=1G",

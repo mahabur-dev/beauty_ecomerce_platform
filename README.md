@@ -25,6 +25,10 @@ The application runtime is containerized with PHP 8.4, Nginx, MySQL 8.4, Redis, 
 3. Build and start the services: `docker compose up -d --build`.
 4. Generate an application key: `docker compose exec app php artisan key:generate`.
 5. Run migrations: `docker compose exec app php artisan migrate`.
+6. Seed system roles: `docker compose exec app php artisan db:seed --class=RoleSeeder`.
+7. Provision the first administrator interactively: `docker compose exec app php artisan identity:provision-super-admin`.
+
+Administrator accounts cannot register publicly. The initial super administrator is provisioned from the CLI; subsequent staff use expiring invitations. Every administrator must enroll TOTP MFA before an admin session is issued.
 
 If a Windows-created bind mount reports that Laravel cannot write to `storage` or `bootstrap/cache`, run this once:
 
@@ -43,5 +47,17 @@ docker compose exec app composer quality
 ```
 
 The quality command runs formatting checks, Larastan static analysis, and the automated test suite.
+
+For a clean MySQL schema/seed verification without touching the persistent development database:
+
+```powershell
+docker compose --profile test up -d --wait mysql-test
+docker compose run --rm --no-deps -e DB_HOST=mysql-test -e DB_DATABASE=beauty_commerce_test -e DB_USERNAME=beauty_test -e DB_PASSWORD=local-test-only app php artisan migrate --seed --force
+docker compose --profile test stop mysql-test
+```
+
+The test database stores its data in container `tmpfs`; it does not use the persistent development volume.
+
+Architecture notes: [Phase 3 domain schema](docs/architecture/phase-03-domain-schema.md) and [Phase 4 identity and access](docs/architecture/phase-04-identity-access.md).
 
 # beauty_ecomerce_platform
