@@ -1,13 +1,13 @@
 # Beauty Commerce Platform
 
-API-first beauty-commerce platform. Phase 1 currently implements the Laravel backend. Separate Next.js storefront and admin applications will be added after their design specifications are supplied.
+API-first beauty-commerce platform with a Laravel backend and an independently deployable Next.js customer storefront. The administration application will remain separate.
 
 ## Repository layout
 
 ```text
 backend/      Laravel 13 API
 docs/         Architecture, decisions, and API documentation
-storefront/   Reserved for the customer application
+frontend/     Next.js customer storefront
 admin/        Reserved for the administration application
 ```
 
@@ -40,6 +40,8 @@ API URL: `http://localhost:8000/api/v1/health`
 
 Mailpit dashboard: `http://localhost:8025`
 
+Frontend setup and commands: [Frontend README](frontend/README.md)
+
 API documentation: [Phase 1 API reference](docs/api/phase-1-api-reference.md)
 
 Submission runbook: [Backend checklist](docs/submission/backend-checklist.md)
@@ -63,5 +65,7 @@ docker compose --profile test stop mysql-test
 The test database stores its data in container `tmpfs`; it does not use the persistent development volume.
 
 Architecture notes: [Phase 3 domain schema](docs/architecture/phase-03-domain-schema.md), [Phase 4 identity and access](docs/architecture/phase-04-identity-access.md), [Phase 5 category/brand management](docs/architecture/phase-05-category-brand-management.md), [Phase 6 product/variant/media](docs/architecture/phase-06-product-variant-media.md), and [Phase 7 public catalog](docs/architecture/phase-07-public-catalog.md).
+
+Frontend architecture: [Phase 1 foundation](docs/architecture/frontend-phase-01-foundation.md).
 
 # beauty_ecomerce_platform

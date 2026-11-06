@@ -1,0 +1,29 @@
+:root {
+  color-scheme: light;
+
+  --brand-50: #fff1f6;
+  --brand-100: #ffe2ec;
+  --brand-200: #ffc4d8;
+  --brand-300: #ff96b8;
+  --brand-400: #fb6394;
+  --brand-500: #ed3978;
+  --brand-600: #d91f63;
+  --brand-700: #b71450;
+  --brand-800: #971345;
+  --brand-900: #7e153f;
+
+  --surface-page: #fffafb;
+  --surface-elevated: #ffffff;
+  --surface-subtle: #fff4f7;
+  --ink: #171522;
+  --ink-muted: #686270;
+  --line: #f2dfe6;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-soft: 0 1rem 3rem rgb(126 21 63 / 8%);
+  --content-max: 80rem;
+}
