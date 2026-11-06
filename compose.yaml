@@ -55,6 +55,28 @@ services:
       - beauty-commerce
     restart: unless-stopped
 
+  mysql-test:
+    image: mysql:8.4
+    profiles: ["test"]
+    environment:
+      MYSQL_DATABASE: beauty_commerce_test
+      MYSQL_USER: beauty_test
+      MYSQL_PASSWORD: local-test-only
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ubeauty_test -plocal-test-only --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    networks:
+      - beauty-commerce
+
   redis:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes"]
