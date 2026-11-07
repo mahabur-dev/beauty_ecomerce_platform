@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { AuthCard, AuthPage, ResetPasswordForm } from "@/features/auth";
+import {
+  AuthCard,
+  AuthPage,
+  AuthRouteFallback,
+  ResetPasswordForm,
+} from "@/features/auth";
 
 export const metadata: Metadata = {
   title: "Set new password",
@@ -19,9 +25,17 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function ResetPasswordPage({
+export default function ResetPasswordPage({
   searchParams,
 }: ResetPasswordPageProps) {
+  return (
+    <Suspense fallback={<AuthRouteFallback />}>
+      <ResetPasswordContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ResetPasswordContent({ searchParams }: ResetPasswordPageProps) {
   const params = await searchParams;
 
   return (

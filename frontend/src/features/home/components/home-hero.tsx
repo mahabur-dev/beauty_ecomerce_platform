@@ -9,6 +9,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { buttonStyles, Container } from "@/components/ui";
 
@@ -37,7 +38,7 @@ export function HomeHero() {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[67%_center] sm:object-center"
+          className="object-cover object-[67%_top] sm:object-top"
         />
         <div className="absolute inset-0 bg-linear-to-r from-[#fff8f8] from-0% via-[#fff8f8]/95 via-48% to-transparent sm:via-42%" />
         <Container className="relative flex min-h-[620px] items-start pt-14 sm:min-h-[570px] sm:items-center sm:pt-0 lg:min-h-[520px]">
@@ -57,17 +58,17 @@ export function HomeHero() {
               body.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/products" className={buttonStyles({ size: "lg" })}>
+              <Link href="/products" className={buttonStyles({ size: "lg" })}>
                 Shop Now
                 <ArrowRight className="size-4" aria-hidden="true" />
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/categories"
                 className={buttonStyles({ variant: "outline", size: "lg" })}
               >
                 Explore Categories
                 <Grid3X3 className="text-brand-700 size-4" aria-hidden="true" />
-              </a>
+              </Link>
             </div>
           </div>
         </Container>
