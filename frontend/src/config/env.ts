@@ -1,12 +1,18 @@
 import { z } from "zod";
 
+const isProduction = process.env.NODE_ENV === "production";
+
+function publicUrl(defaultValue: string) {
+  return z.preprocess(
+    (value) => (value === undefined && !isProduction ? defaultValue : value),
+    z.string().url(),
+  );
+}
+
 const publicEnvironmentSchema = z.object({
-  NEXT_PUBLIC_APP_NAME: z.string().trim().min(1).default("Beauty Commerce"),
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_API_BASE_URL: z
-    .string()
-    .url()
-    .default("http://localhost:8000/api/v1"),
+  NEXT_PUBLIC_APP_NAME: z.string().trim().min(1).default("GlowCare"),
+  NEXT_PUBLIC_APP_URL: publicUrl("http://localhost:3000"),
+  NEXT_PUBLIC_API_BASE_URL: publicUrl("http://localhost:8000/api/v1"),
 });
 
 const parsedEnvironment = publicEnvironmentSchema.parse({

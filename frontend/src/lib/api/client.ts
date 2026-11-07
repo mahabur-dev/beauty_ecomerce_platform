@@ -1,5 +1,9 @@
 import { env } from "@/config/env";
-import { ApiError } from "@/lib/api/api-error";
+import {
+  ApiError,
+  ApiNetworkError,
+  ApiResponseError,
+} from "@/lib/api/api-error";
 import type { ProblemDetails } from "@/types/api";
 
 interface ApiRequestOptions extends Omit<RequestInit, "body"> {
@@ -19,13 +23,25 @@ async function parseResponseBody(response: Response): Promise<unknown> {
   }
 
   const contentType = response.headers.get("content-type") ?? "";
+  const text = await response.text();
 
-  if (contentType.includes("json")) {
-    return response.json();
+  if (text.length === 0) {
+    return undefined;
   }
 
-  const text = await response.text();
-  return text.length > 0 ? text : undefined;
+  if (contentType.includes("json")) {
+    try {
+      return JSON.parse(text) as unknown;
+    } catch (error) {
+      if (!response.ok) {
+        return text;
+      }
+
+      throw new ApiResponseError(response.status, error);
+    }
+  }
+
+  return text;
 }
 
 function toProblemDetails(response: Response, body: unknown): ProblemDetails {
@@ -76,7 +92,14 @@ export async function apiRequest<T>(
     headers,
     ...(requestPayload === undefined ? {} : { body: requestPayload }),
   };
-  const response = await fetch(buildApiUrl(path), requestInit);
+  let response: Response;
+
+  try {
+    response = await fetch(buildApiUrl(path), requestInit);
+  } catch (error) {
+    throw new ApiNetworkError(error);
+  }
+
   const responseBody = await parseResponseBody(response);
 
   if (!response.ok) {
