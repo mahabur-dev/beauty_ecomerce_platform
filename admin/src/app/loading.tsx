@@ -1,7 +1,10 @@
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export default function Loading() {
   return (
-    <p className="sr-only" role="status">
-      Loading administration application…
-    </p>
+    <LoadingScreen
+      message="Loading workspace…"
+      description="Preparing GlowCare administration tools."
+    />
   );
 }

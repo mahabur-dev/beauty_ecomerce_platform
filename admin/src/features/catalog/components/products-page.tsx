@@ -1,25 +1,32 @@
 "use client";
 
 import Image from "next/image";
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@/components/ui/icon";
 import { PermissionGate } from "@/features/auth/components/permission-gate";
 import {
-  type Product,
-  type CatalogStatus,
-  useCatalogDemo,
-} from "@/features/catalog/demo-store";
+  createProduct,
+  deleteProduct,
+  setProductStatus,
+  slugify,
+  updateProduct,
+  updateProductVariant,
+  uploadProductImage,
+  type ProductInput,
+} from "@/features/catalog/api";
+import type { Product, ProductStatus } from "@/features/catalog/contracts";
+import { catalogErrorMessage } from "@/features/catalog/errors";
+import {
+  invalidateProductCatalog,
+  useCatalogOptions,
+  useCatalogSummary,
+  useDebouncedValue,
+  useProducts,
+} from "@/features/catalog/queries";
 import {
   ActionButton,
-  CatalogTabs,
   ConfirmDelete,
-  DemoNote,
   Field,
   IconAction,
   ListToolbar,
@@ -27,194 +34,284 @@ import {
   PageHeading,
   Pagination,
   Panel,
+  SelectDropdown,
   StatCard,
   StatusBadge,
   TableEmpty,
   TableScroll,
-  useCatalogList,
 } from "./catalog-ui";
 
-const currency = (value: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    value,
-  );
-const pictures = ["🍊", "🧴", "🌷", "💄", "🌹", "🎨", "🫧", "✨"];
+const PAGE_SIZE = 6;
+const productStatusOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "draft", label: "Draft" },
+  { value: "inactive", label: "Inactive" },
+] as const;
+const currency = (value: number | null) =>
+  value === null
+    ? "—"
+    : new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(value);
+
+type ProductSubmission = { input: ProductInput; image: File | null };
 
 function ProductForm({
   current,
   onClose,
   onSave,
+  isSaving,
+  requestError,
 }: {
   current: Product | null;
   onClose: () => void;
-  onSave: (product: Product) => void;
+  onSave: (submission: ProductSubmission) => void;
+  isSaving: boolean;
+  requestError: string;
 }) {
-  const { categories, products } = useCatalogDemo();
-  const parents = categories.filter((item) => item.parentId === null);
+  const metadata = useCatalogOptions();
+  const categories = metadata.data?.categories ?? [];
+  const allSubcategories = metadata.data?.subcategories ?? [];
+  const brands = metadata.data?.brands ?? [];
+  const defaultVariant = current?.variants?.find(
+    (variant) => variant.is_default,
+  );
   const [name, setName] = useState(current?.name ?? "");
-  const [sku, setSku] = useState(current?.sku ?? "");
-  const [categoryId, setCategoryId] = useState(current?.categoryId ?? "");
+  const [slug, setSlug] = useState(current?.slug ?? "");
+  const [sku, setSku] = useState(defaultVariant?.sku ?? "");
+  const [categoryId, setCategoryId] = useState(
+    current?.subcategory?.parent_id
+      ? String(current.subcategory.parent_id)
+      : "",
+  );
   const [subcategoryId, setSubcategoryId] = useState(
-    current?.subcategoryId ?? "",
+    current?.primary_category_id ? String(current.primary_category_id) : "",
+  );
+  const [brandId, setBrandId] = useState(
+    current?.brand_id ? String(current.brand_id) : "",
   );
   const [description, setDescription] = useState(current?.description ?? "");
-  const [price, setPrice] = useState(String(current?.price ?? ""));
-  const [oldPrice, setOldPrice] = useState(String(current?.oldPrice ?? ""));
-  const [stock, setStock] = useState(String(current?.stock ?? ""));
-  const [status, setStatus] = useState<CatalogStatus>(
-    current?.status ?? "Draft",
+  const [shortDescription, setShortDescription] = useState(
+    current?.short_description ?? "",
   );
-  const [featured, setFeatured] = useState(current?.featured ?? false);
-  const [image, setImage] = useState(current?.image ?? "🧴");
+  const [price, setPrice] = useState(String(current?.new_price ?? ""));
+  const [oldPrice, setOldPrice] = useState(String(current?.old_price ?? ""));
+  const [status, setStatus] = useState<ProductStatus>(
+    current?.status ?? "draft",
+  );
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const subcategories = categories.filter(
-    (item) => item.parentId === categoryId,
+  const [validationError, setValidationError] = useState("");
+  const subcategories = allSubcategories.filter(
+    (item) => item.parent_id === Number(categoryId),
   );
-  const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const existingImage =
+    current?.images?.find((image) => image.is_primary)?.url ?? null;
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  function handleImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
     if (!file) return;
     if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-      setError("Choose an image file under 5 MB.");
+      setValidationError("Choose a JPG, PNG, WEBP or AVIF image under 5 MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-    setError("");
-  };
-  const submit = (event: FormEvent) => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setValidationError("");
+  }
+
+  function submit(event: FormEvent) {
     event.preventDefault();
     const amount = Number(price);
-    const previous = Number(oldPrice || price);
-    const quantity = Number(stock);
-    if (!name.trim() || !sku.trim() || !categoryId || !subcategoryId) {
-      setError(
-        "Complete all required fields, including category and subcategory.",
+    const previous = oldPrice ? Number(oldPrice) : null;
+    const normalizedSlug = slugify(slug || name);
+    if (
+      !name.trim() ||
+      !normalizedSlug ||
+      !sku.trim() ||
+      !categoryId ||
+      !subcategoryId
+    ) {
+      setValidationError(
+        "Complete all required product, SKU and category fields.",
       );
       return;
     }
-    if (
-      products.some(
-        (item) =>
-          item.sku.toLowerCase() === sku.toLowerCase().trim() &&
-          item.id !== current?.id,
-      )
-    ) {
-      setError("SKU must be unique.");
+    if (!description.trim()) {
+      setValidationError("A full product description is required.");
       return;
     }
     if (
       !Number.isFinite(amount) ||
       amount < 0 ||
-      !Number.isFinite(previous) ||
-      previous < amount ||
-      !Number.isInteger(quantity) ||
-      quantity < 0
+      (previous !== null && (!Number.isFinite(previous) || previous < amount))
     ) {
-      setError(
-        "Prices must be valid, old price cannot be lower, and stock must be a whole number.",
+      setValidationError(
+        "Enter valid prices; compare-at price cannot be lower than the current price.",
       );
       return;
     }
+    if (!current && status === "active" && !imageFile) {
+      setValidationError(
+        "Upload a primary image before creating an active product.",
+      );
+      return;
+    }
+    setValidationError("");
     onSave({
-      id: current?.id ?? `PRD-DEMO-${crypto.randomUUID().slice(0, 6)}`,
-      name: name.trim(),
-      sku: sku.trim(),
-      categoryId,
-      subcategoryId,
-      price: amount,
-      oldPrice: previous,
-      stock: quantity,
-      status,
-      featured,
-      image: imagePreview ?? image,
-      description: description.trim(),
+      input: {
+        category_id: Number(categoryId),
+        subcategory_id: Number(subcategoryId),
+        brand_id: brandId ? Number(brandId) : null,
+        name: name.trim(),
+        slug: normalizedSlug,
+        description: description.trim(),
+        short_description: shortDescription.trim() || null,
+        status,
+        sku: sku.trim(),
+        price: amount,
+        compare_at_price: previous,
+      },
+      image: imageFile,
     });
-    onClose();
-  };
+  }
+
+  const metadataLoading = metadata.isLoading;
+  const metadataError = metadata.error
+    ? catalogErrorMessage(metadata.error)
+    : "";
   return (
     <Modal
       title={current ? "Edit product" : "Add new product"}
-      subtitle="Create a polished product listing for your beauty catalog."
+      subtitle="Create a complete, validated product listing for your beauty catalog."
       size="wide"
       onClose={onClose}
     >
-      <form className="catalog-form" onSubmit={submit}>
+      <form className="catalog-form" onSubmit={submit} noValidate>
         <div className="catalog-form-section">
           <div className="catalog-form-section-header">
             <span>01</span>
             <div>
               <h3>Product information</h3>
-              <p>The details customers see when browsing your store.</p>
+              <p>Core merchandising and storefront details.</p>
             </div>
           </div>
           <div className="catalog-form-grid">
             <Field label="Product name" required>
               <input
                 autoFocus
-                maxLength={110}
+                maxLength={220}
                 className="catalog-input"
                 placeholder="e.g. Rose Glow Face Serum"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (!current) setSlug(slugify(event.target.value));
+                }}
+              />
+            </Field>
+            <Field label="URL slug" required>
+              <input
+                maxLength={240}
+                className="catalog-input"
+                placeholder="rose-glow-face-serum"
+                value={slug}
+                onChange={(event) => setSlug(event.target.value)}
               />
             </Field>
             <Field label="SKU" required>
               <input
-                maxLength={40}
+                maxLength={80}
                 className="catalog-input"
                 placeholder="GC-SRM-008"
                 value={sku}
                 onChange={(event) => setSku(event.target.value)}
-                required
+              />
+            </Field>
+            <Field label="Brand">
+              <SelectDropdown
+                id="product-brand"
+                aria-label="Select brand"
+                fullWidth
+                disabled={metadataLoading}
+                value={brandId}
+                onChange={setBrandId}
+                placeholder="No brand"
+                options={[
+                  { value: "", label: "No brand" },
+                  ...brands.map((item) => ({
+                    value: String(item.id),
+                    label: item.name,
+                  })),
+                ]}
+                menuHeader="Brand"
               />
             </Field>
             <Field label="Category" required>
-              <select
-                className="catalog-input"
+              <SelectDropdown
+                id="product-category"
+                aria-label="Select category"
+                fullWidth
+                disabled={metadataLoading}
                 value={categoryId}
-                onChange={(event) => {
-                  setCategoryId(event.target.value);
+                onChange={(value) => {
+                  setCategoryId(value);
                   setSubcategoryId("");
                 }}
-                required
-              >
-                <option value="">Select category</option>
-                {parents.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select category"
+                options={categories.map((item) => ({
+                  value: String(item.id),
+                  label: item.name,
+                }))}
+                menuHeader="Category"
+              />
             </Field>
             <Field label="Subcategory" required>
-              <select
-                className="catalog-input"
-                disabled={!categoryId || subcategories.length === 0}
+              <SelectDropdown
+                id="product-subcategory"
+                aria-label="Select subcategory"
+                fullWidth
+                disabled={!categoryId || !subcategories.length}
                 value={subcategoryId}
-                onChange={(event) => setSubcategoryId(event.target.value)}
-                required
-              >
-                <option value="">Select subcategory</option>
-                {subcategories.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSubcategoryId}
+                placeholder="Select subcategory"
+                options={subcategories.map((item) => ({
+                  value: String(item.id),
+                  label: item.name,
+                }))}
+                menuHeader="Subcategory"
+              />
             </Field>
           </div>
-          <Field label="Description">
+          <Field
+            label="Short description"
+            hint="Used in compact product cards and search previews."
+          >
+            <input
+              maxLength={500}
+              className="catalog-input"
+              placeholder="One-line customer-facing summary"
+              value={shortDescription}
+              onChange={(event) => setShortDescription(event.target.value)}
+            />
+          </Field>
+          <Field label="Full description" required>
             <textarea
               className="catalog-input catalog-textarea"
-              rows={3}
+              rows={4}
+              maxLength={100000}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="What makes this product special?"
+              placeholder="Describe benefits, usage and key product details."
             />
           </Field>
         </div>
@@ -222,8 +319,8 @@ function ProductForm({
           <div className="catalog-form-section-header">
             <span>02</span>
             <div>
-              <h3>Pricing & availability</h3>
-              <p>Set display prices and preview inventory status.</p>
+              <h3>Pricing & publication</h3>
+              <p>Configure the default sellable variant and visibility.</p>
             </div>
           </div>
           <div className="catalog-form-grid catalog-form-grid-three">
@@ -236,7 +333,6 @@ function ProductForm({
                 placeholder="0.00"
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}
-                required
               />
             </Field>
             <Field label="Compare at price ($)">
@@ -250,40 +346,18 @@ function ProductForm({
                 onChange={(event) => setOldPrice(event.target.value)}
               />
             </Field>
-            <Field label="Stock units" required>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className="catalog-input"
-                placeholder="0"
-                value={stock}
-                onChange={(event) => setStock(event.target.value)}
-                required
-              />
-            </Field>
             <Field label="Publication status">
-              <select
-                className="catalog-input"
+              <SelectDropdown
+                id="product-status"
+                aria-label="Publication status"
+                fullWidth
                 value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as CatalogStatus)
-                }
-              >
-                <option>Active</option>
-                <option>Draft</option>
-                <option>Archived</option>
-              </select>
-            </Field>
-            <Field label="Store highlight">
-              <label className="catalog-toggle-row">
-                <input
-                  type="checkbox"
-                  checked={featured}
-                  onChange={(event) => setFeatured(event.target.checked)}
-                />
-                <span>Featured product</span>
-              </label>
+                onChange={(value) => setStatus(value as ProductStatus)}
+                options={productStatusOptions.filter(
+                  (option) => option.value !== "all",
+                )}
+                menuHeader="Status"
+              />
             </Field>
           </div>
         </div>
@@ -291,22 +365,24 @@ function ProductForm({
           <div className="catalog-form-section-header">
             <span>03</span>
             <div>
-              <h3>Product imagery</h3>
-              <p>Preview images locally; nothing is uploaded to a server.</p>
+              <h3>Primary image</h3>
+              <p>
+                Real image uploads are stored through the catalog media API.
+              </p>
             </div>
           </div>
           <div className="catalog-image-editor">
             <div className="catalog-image-preview">
-              {imagePreview || image.startsWith("data:") ? (
+              {imagePreview || existingImage ? (
                 <Image
                   unoptimized
                   width={125}
                   height={125}
-                  src={imagePreview ?? image}
-                  alt="Selected product preview"
+                  src={imagePreview ?? existingImage!}
+                  alt="Product image preview"
                 />
               ) : (
-                <span>{image}</span>
+                <Icon name="package" size={34} />
               )}
             </div>
             <div className="catalog-image-controls">
@@ -314,112 +390,152 @@ function ProductForm({
                 <Icon name="package" size={17} /> Choose image
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
                   onChange={handleImage}
                   className="sr-only"
                 />
               </label>
-              <small>JPG, PNG or WEBP · Max 5 MB · Local preview only</small>
-              <div className="catalog-symbol-picker">
-                {pictures.map((symbol) => (
-                  <button
-                    type="button"
-                    key={symbol}
-                    className={
-                      symbol === image && !imagePreview
-                        ? "catalog-symbol selected"
-                        : "catalog-symbol"
-                    }
-                    aria-label={`Use ${symbol} illustration`}
-                    aria-pressed={symbol === image && !imagePreview}
-                    onClick={() => {
-                      setImage(symbol);
-                      setImagePreview(null);
-                    }}
-                  >
-                    {symbol}
-                  </button>
-                ))}
-              </div>
+              <small>JPG, PNG, WEBP or AVIF · Max 5 MB</small>
+              {imageFile && <small>Selected: {imageFile.name}</small>}
             </div>
           </div>
         </div>
-        {error && (
+        {(validationError || requestError || metadataError) && (
           <p className="catalog-field-error" role="alert">
-            {error}
+            {validationError || requestError || metadataError}
           </p>
         )}
         <div className="catalog-form-footer">
-          <ActionButton variant="secondary" onClick={onClose}>
+          <ActionButton
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSaving}
+          >
             Cancel
           </ActionButton>
-          <ActionButton type="submit">
-            {current ? "Save product" : "Add to catalog"}
+          <ActionButton
+            type="submit"
+            disabled={isSaving || metadataLoading || Boolean(metadataError)}
+          >
+            {isSaving
+              ? "Saving product…"
+              : current
+                ? "Save product"
+                : "Add to catalog"}
           </ActionButton>
         </div>
       </form>
     </Modal>
   );
 }
+
 export function ProductsPage() {
-  const { products, categories, upsertProduct, removeProduct } =
-    useCatalogDemo();
+  const queryClient = useQueryClient();
+  const optionsQuery = useCatalogOptions();
+  const summaryQuery = useCatalogSummary();
+  const categories = optionsQuery.data?.categories ?? [];
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [notice, setNotice] = useState("");
-  const matcher = useCallback(
-    (item: Product, search: string, status: string) =>
-      (status === "all" || item.status === status) &&
-      (categoryFilter === "all" || item.categoryId === categoryFilter) &&
-      `${item.name} ${item.sku} ${item.id}`.toLowerCase().includes(search),
-    [categoryFilter],
-  );
-  const list = useCatalogList(products, matcher, 6);
-  const liveCount = products.filter((item) => item.status === "Active").length;
-  const lowStock = products.filter((item) => item.stock <= 15).length;
-  const selectedCategory = useMemo(
-    () => categories.filter((item) => item.parentId === null),
-    [categories],
-  );
+  const debouncedSearch = useDebouncedValue(search);
+  const productsQuery = useProducts({
+    page,
+    perPage: PAGE_SIZE,
+    search: debouncedSearch,
+    status,
+    ...(categoryFilter === "all" ? {} : { categoryId: Number(categoryFilter) }),
+  });
+  const products = productsQuery.data?.data ?? [];
+  const meta = productsQuery.data?.meta;
+  const summary = summaryQuery.data?.products;
+  const pageError =
+    productsQuery.error ?? summaryQuery.error ?? optionsQuery.error;
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ input, image }: ProductSubmission) => {
+      if (editing === "new") {
+        const created = await createProduct(input);
+        if (image) await uploadProductImage(created.id, image, input.name);
+        return input.status === "draft"
+          ? created
+          : setProductStatus(created.id, input.status);
+      }
+      if (!editing) throw new Error("No product selected.");
+      if (image) await uploadProductImage(editing.id, image, input.name);
+      const defaultVariant = editing.variants?.find(
+        (variant) => variant.is_default,
+      );
+      if (defaultVariant && defaultVariant.sku !== input.sku) {
+        await updateProductVariant(editing.id, defaultVariant.id, {
+          sku: input.sku,
+          price: input.price,
+          compare_at_price: input.compare_at_price,
+        });
+      }
+      return updateProduct(editing.id, input);
+    },
+    onSuccess: async (saved) => {
+      await invalidateProductCatalog(queryClient);
+      setEditing(null);
+      setNotice(`${saved.name} has been saved.`);
+    },
+    onError: async () => {
+      await invalidateProductCatalog(queryClient);
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (product: Product) => deleteProduct(product.id),
+    onSuccess: async (_, product) => {
+      await invalidateProductCatalog(queryClient);
+      setDeleting(null);
+      setNotice(`${product.name} has been removed.`);
+    },
+  });
+
+  function resetPage(update: () => void) {
+    update();
+    setPage(1);
+  }
   return (
     <PermissionGate permission="catalog.products.read">
       <div className="catalog-page">
         <PageHeading
           title="Products"
-          description="Create, organize and manage your beauty product collection."
+          description="Create, organize and manage your live beauty product catalog."
           action={
             <ActionButton onClick={() => setEditing("new")}>
               <span className="catalog-plus">+</span> Add new product
             </ActionButton>
           }
         />
-        <DemoNote />
-        <CatalogTabs active="products" />
         <div className="catalog-stats-grid">
           <StatCard
             label="Total products"
-            value={products.length}
-            detail="Available catalog records"
+            value={summary?.total ?? "—"}
+            detail="All catalog records"
           />
           <StatCard
             label="Published"
-            value={liveCount}
+            value={summary?.active ?? "—"}
             detail="Visible in your storefront"
             icon="tag"
             tone="green"
           />
           <StatCard
-            label="Draft & archived"
-            value={products.length - liveCount}
-            detail="Not publicly visible"
+            label="Draft"
+            value={summary?.draft ?? "—"}
+            detail="Awaiting publication"
             icon="layers"
             tone="purple"
           />
           <StatCard
-            label="Low / out of stock"
-            value={lowStock}
-            detail="Needs your attention"
+            label="Inactive"
+            value={summary?.inactive ?? "—"}
+            detail="Hidden from customers"
             icon="warning"
             tone="orange"
           />
@@ -436,50 +552,52 @@ export function ProductsPage() {
             </button>
           </div>
         )}
+        {pageError && (
+          <div className="catalog-field-error" role="alert">
+            {catalogErrorMessage(pageError)}
+          </div>
+        )}
         <Panel
           title="Product catalog"
-          subtitle="An organized overview of your current listings."
+          subtitle="Server-backed product records with live filtering and pagination."
           action={
-            <span className="catalog-count">
-              {list.matching.length} products
-            </span>
+            <span className="catalog-count">{meta?.total ?? 0} products</span>
           }
         >
           <ListToolbar
-            search={list.search}
-            setSearch={list.setSearch}
-            status={list.status}
-            setStatus={list.setStatus}
-            placeholder="Search by product name, SKU or ID..."
+            search={search}
+            setSearch={(value) => resetPage(() => setSearch(value))}
+            status={status}
+            setStatus={(value) => resetPage(() => setStatus(value))}
+            statusOptions={productStatusOptions}
+            placeholder="Search by product name or SKU..."
           >
-            <label className="sr-only" htmlFor="catalog-filter-category">
-              Filter category
-            </label>
-            <select
+            <SelectDropdown
               id="catalog-filter-category"
-              className="catalog-select"
+              aria-label="Filter category"
               value={categoryFilter}
-              onChange={(event) => {
-                setCategoryFilter(event.target.value);
-                list.setPage(1);
-              }}
-            >
-              <option value="all">All categories</option>
-              {selectedCategory.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => resetPage(() => setCategoryFilter(value))}
+              options={[
+                { value: "all", label: "All categories" },
+                ...categories.map((item) => ({
+                  value: String(item.id),
+                  label: item.name,
+                })),
+              ]}
+              menuHeader="Category"
+            />
           </ListToolbar>
           <TableScroll>
-            <table className="catalog-table">
+            <table
+              className="catalog-table"
+              aria-busy={productsQuery.isFetching}
+            >
               <thead>
                 <tr>
                   <th scope="col">Product</th>
                   <th scope="col">Category</th>
+                  <th scope="col">Brand</th>
                   <th scope="col">Price</th>
-                  <th scope="col">Stock</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="catalog-actions-heading">
                     Actions
@@ -487,116 +605,123 @@ export function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {list.paged.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="catalog-name-cell">
-                        <span
-                          className="catalog-product-avatar"
-                          aria-hidden="true"
-                        >
-                          {item.image.startsWith("data:") ? (
-                            <Image
-                              unoptimized
-                              width={44}
-                              height={44}
-                              src={item.image}
-                              alt=""
-                            />
-                          ) : (
-                            item.image
-                          )}
-                        </span>
-                        <div>
-                          <strong>{item.name}</strong>
-                          <small>
-                            {item.sku} · {item.id}
-                          </small>
+                {products.map((item) => {
+                  const primaryImage =
+                    item.images?.find((image) => image.is_primary) ??
+                    item.images?.[0];
+                  const defaultVariant = item.variants?.find(
+                    (variant) => variant.is_default,
+                  );
+                  return (
+                    <tr key={item.id}>
+                      <td>
+                        <div className="catalog-name-cell">
+                          <span
+                            className="catalog-product-avatar"
+                            aria-hidden="true"
+                          >
+                            {primaryImage ? (
+                              <Image
+                                unoptimized
+                                width={44}
+                                height={44}
+                                src={primaryImage.url}
+                                alt=""
+                              />
+                            ) : (
+                              <Icon name="package" size={20} />
+                            )}
+                          </span>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <small>
+                              {defaultVariant?.sku || "No SKU"} · #{item.id}
+                            </small>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="catalog-category-name">
-                        {categories.find((c) => c.id === item.categoryId)
-                          ?.name ?? "—"}
-                        <small>
-                          {categories.find((c) => c.id === item.subcategoryId)
-                            ?.name ?? "—"}
-                        </small>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="catalog-price">
-                        <strong>{currency(item.price)}</strong>
-                        <del>{currency(item.oldPrice)}</del>
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className={`catalog-stock ${item.stock === 0 ? "catalog-stock-out" : item.stock <= 15 ? "catalog-stock-low" : ""}`}
-                      >
-                        {item.stock === 0
-                          ? "Out of stock"
-                          : `${item.stock} in stock`}
-                      </span>
-                    </td>
-                    <td>
-                      <StatusBadge value={item.status} />
-                    </td>
-                    <td>
-                      <div className="catalog-actions">
-                        <IconAction
-                          label={`Edit ${item.name}`}
-                          onClick={() => setEditing(item)}
-                        >
-                          <span aria-hidden="true">✎</span>
-                        </IconAction>
-                        <IconAction
-                          label={`Delete ${item.name}`}
-                          onClick={() => setDeleting(item)}
-                        >
-                          <span aria-hidden="true">♧</span>
-                        </IconAction>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="catalog-category-name">
+                          {item.subcategory?.parent?.name ?? "—"}
+                          <small>{item.subcategory?.name ?? "—"}</small>
+                        </div>
+                      </td>
+                      <td>{item.brand?.name ?? "—"}</td>
+                      <td>
+                        <div className="catalog-price">
+                          <strong>{currency(item.new_price)}</strong>
+                          {item.old_price !== null && (
+                            <del>{currency(item.old_price)}</del>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <StatusBadge value={item.status} />
+                      </td>
+                      <td>
+                        <div className="catalog-actions">
+                          <IconAction
+                            label={`Edit ${item.name}`}
+                            onClick={() => setEditing(item)}
+                          >
+                            <span aria-hidden="true">✎</span>
+                          </IconAction>
+                          <IconAction
+                            label={`Delete ${item.name}`}
+                            onClick={() => setDeleting(item)}
+                          >
+                            <span aria-hidden="true">♧</span>
+                          </IconAction>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </TableScroll>
-          {!list.matching.length && <TableEmpty />}
+          {!productsQuery.isLoading && !products.length && <TableEmpty />}
           <Pagination
-            count={list.matching.length}
-            page={list.page}
-            onPageChange={list.setPage}
-            size={6}
+            count={meta?.total ?? 0}
+            page={meta?.current_page ?? page}
+            onPageChange={setPage}
+            size={PAGE_SIZE}
           />
         </Panel>
-        <div className="catalog-tip">
-          <Icon name="sparkles" size={20} />
-          <span>
-            <strong>Designed for growth.</strong> Product rows, filters, dialogs
-            and data contracts can be wired to Laravel later without rebuilding
-            the visual components.
-          </span>
-        </div>
       </div>
       {editing && (
         <ProductForm
+          key={editing === "new" ? "new" : editing.id}
           current={editing === "new" ? null : editing}
-          onSave={upsertProduct}
-          onClose={() => setEditing(null)}
+          onSave={(submission) => saveMutation.mutate(submission)}
+          isSaving={saveMutation.isPending}
+          requestError={
+            saveMutation.isError ? catalogErrorMessage(saveMutation.error) : ""
+          }
+          onClose={() => {
+            if (!saveMutation.isPending) {
+              saveMutation.reset();
+              setEditing(null);
+            }
+          }}
         />
       )}
       {deleting && (
         <ConfirmDelete
           name={deleting.name}
-          onCancel={() => setDeleting(null)}
-          onConfirm={() => {
-            removeProduct(deleting.id);
-            setDeleting(null);
-            setNotice(`${deleting.name} removed from preview.`);
+          pending={deleteMutation.isPending}
+          error={
+            deleteMutation.isError
+              ? catalogErrorMessage(deleteMutation.error)
+              : undefined
+          }
+          onCancel={() => {
+            if (!deleteMutation.isPending) {
+              deleteMutation.reset();
+              setDeleting(null);
+            }
           }}
+          onConfirm={() => deleteMutation.mutate(deleting)}
         />
       )}
     </PermissionGate>

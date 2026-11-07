@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin\AdminAuthController;
 use App\Http\Controllers\Api\V1\Admin\AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\AttributeController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
+use App\Http\Controllers\Api\V1\Admin\CatalogOverviewController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\InvitationController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
@@ -69,31 +70,35 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/auth/mfa/recovery-codes', [AdminUserController::class, 'regenerateRecoveryCodes'])
                 ->middleware('throttle:identity-write');
 
-            Route::middleware('throttle:identity-write')->group(function (): void {
+            Route::middleware('throttle:catalog-read')->group(function (): void {
                 Route::get('/categories', [CategoryController::class, 'indexRoots']);
+                Route::get('/categories/{category}', [CategoryController::class, 'showRoot']);
+                Route::get('/subcategories', [CategoryController::class, 'indexChildren']);
+                Route::get('/subcategories/{subcategory}', [CategoryController::class, 'showChild']);
+                Route::get('/brands', [BrandController::class, 'index']);
+                Route::get('/brands/{brand}', [BrandController::class, 'show']);
+                Route::get('/attributes', [AttributeController::class, 'index']);
+                Route::get('/attributes/{attribute}', [AttributeController::class, 'show']);
+                Route::get('/products', [ProductController::class, 'index']);
+                Route::get('/products/{product}', [ProductController::class, 'show']);
+
+                Route::get('/catalog/summary', [CatalogOverviewController::class, 'summary']);
+                Route::get('/catalog/options', [CatalogOverviewController::class, 'options']);
+            });
+
+            Route::middleware('throttle:catalog-write')->group(function (): void {
                 Route::post('/categories', [CategoryController::class, 'storeRoot']);
                 Route::post('/categories/{category}/restore', [CategoryController::class, 'restoreRoot']);
-                Route::get('/categories/{category}', [CategoryController::class, 'showRoot']);
                 Route::patch('/categories/{category}', [CategoryController::class, 'updateRoot']);
                 Route::delete('/categories/{category}', [CategoryController::class, 'destroyRoot']);
 
-                Route::get('/subcategories', [CategoryController::class, 'indexChildren']);
                 Route::post('/subcategories', [CategoryController::class, 'storeChild']);
                 Route::post('/subcategories/{subcategory}/restore', [CategoryController::class, 'restoreChild']);
-                Route::get('/subcategories/{subcategory}', [CategoryController::class, 'showChild']);
                 Route::patch('/subcategories/{subcategory}', [CategoryController::class, 'updateChild']);
                 Route::delete('/subcategories/{subcategory}', [CategoryController::class, 'destroyChild']);
 
-                Route::get('/brands', [BrandController::class, 'index']);
-                Route::get('/brands/{brand}', [BrandController::class, 'show']);
-
-                Route::get('/attributes', [AttributeController::class, 'index']);
-                Route::get('/attributes/{attribute}', [AttributeController::class, 'show']);
-
-                Route::get('/products', [ProductController::class, 'index']);
                 Route::post('/products', [ProductController::class, 'store']);
                 Route::post('/products/{product}/restore', [ProductController::class, 'restore']);
-                Route::get('/products/{product}', [ProductController::class, 'show']);
                 Route::patch('/products/{product}', [ProductController::class, 'update']);
                 Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 
@@ -111,6 +116,10 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/users/{user}/administrative-role', [AdminUserController::class, 'setRole']);
                 Route::delete('/users/{user}/mfa', [AdminUserController::class, 'resetMfa']);
 
+                Route::get('/check', [CheckController::class, 'check']);
+            });
+
+            Route::middleware(['role:super_admin', 'throttle:catalog-write'])->group(function (): void {
                 Route::post('/brands', [BrandController::class, 'store']);
                 Route::post('/brands/{brand}/restore', [BrandController::class, 'restore']);
                 Route::patch('/brands/{brand}', [BrandController::class, 'update']);

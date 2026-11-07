@@ -59,5 +59,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('identity-write', fn (Request $request) => Limit::perMinute(20)
             ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip()))
         );
+
+        RateLimiter::for('catalog-read', fn (Request $request) => Limit::perMinute(
+            (int) config('catalog.rate_limits.read_per_minute'),
+        )->by('catalog-read|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
+
+        RateLimiter::for('catalog-write', fn (Request $request) => Limit::perMinute(
+            (int) config('catalog.rate_limits.write_per_minute'),
+        )->by('catalog-write|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
     }
 }

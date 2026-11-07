@@ -10,7 +10,12 @@ import {
 } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import type { CatalogStatus } from "@/features/catalog/demo-store";
+import {
+  SelectDropdown,
+  type SelectOption,
+} from "@/components/ui/select-dropdown";
+
+export { SelectDropdown, type SelectOption };
 
 export function PageHeading({
   eyebrow = "CATALOG MANAGEMENT",
@@ -40,14 +45,7 @@ export function PageHeading({
   );
 }
 export function DemoNote() {
-  return (
-    <div className="catalog-demo-note" role="status">
-      <span className="catalog-demo-dot" /> <strong>Design preview</strong>
-      <span>
-        Interactive sample content only · No API requests or database writes
-      </span>
-    </div>
-  );
+  return null;
 }
 export function CatalogTabs({
   active,
@@ -122,11 +120,13 @@ export function StatCard({
     </div>
   );
 }
-export function StatusBadge({ value }: { value: CatalogStatus }) {
+export function StatusBadge({ value }: { value: string }) {
+  const normalized = value.toLowerCase();
+  const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
   return (
-    <span className={`catalog-status catalog-status-${value.toLowerCase()}`}>
+    <span className={`catalog-status catalog-status-${normalized}`}>
       <span />
-      {value}
+      {label}
     </span>
   );
 }
@@ -208,6 +208,12 @@ export function ListToolbar({
   status,
   setStatus,
   placeholder,
+  statusOptions = [
+    { value: "all", label: "All statuses" },
+    { value: "active", label: "Active" },
+    { value: "draft", label: "Draft" },
+    { value: "inactive", label: "Inactive" },
+  ],
   children,
 }: {
   search: string;
@@ -215,6 +221,7 @@ export function ListToolbar({
   status: string;
   setStatus: (value: string) => void;
   placeholder: string;
+  statusOptions?: readonly SelectOption[];
   children?: ReactNode;
 }) {
   return (
@@ -231,20 +238,14 @@ export function ListToolbar({
         <kbd>⌕</kbd>
       </label>
       <div className="catalog-toolbar-filters">
-        <label className="sr-only" htmlFor="catalog-status">
-          Filter status
-        </label>
-        <select
+        <SelectDropdown
           id="catalog-status"
-          className="catalog-select"
+          aria-label="Filter status"
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
-        >
-          <option value="all">All statuses</option>
-          <option>Active</option>
-          <option>Draft</option>
-          <option>Archived</option>
-        </select>
+          onChange={setStatus}
+          options={statusOptions}
+          menuHeader="Status"
+        />
         {children}
       </div>
     </div>
@@ -424,30 +425,39 @@ export function ConfirmDelete({
   name,
   onConfirm,
   onCancel,
+  pending = false,
+  error,
 }: {
   name: string;
   onConfirm: () => void;
   onCancel: () => void;
+  pending?: boolean;
+  error?: string | undefined;
 }) {
   return (
     <Modal
       title="Delete this item?"
-      subtitle="This action only updates the local design preview."
+      subtitle="This action cannot be undone."
       onClose={onCancel}
     >
       <div className="catalog-confirm">
         <span className="catalog-confirm-icon">!</span>
         <p>
-          Are you sure you want to remove <strong>{name}</strong>? This item
-          will disappear from your preview.
+          Are you sure you want to remove <strong>{name}</strong>? This action
+          cannot be undone.
         </p>
       </div>
+      {error && (
+        <p className="catalog-field-error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="catalog-form-footer">
-        <ActionButton variant="secondary" onClick={onCancel}>
+        <ActionButton variant="secondary" onClick={onCancel} disabled={pending}>
           Cancel
         </ActionButton>
-        <ActionButton variant="danger" onClick={onConfirm}>
-          Delete item
+        <ActionButton variant="danger" onClick={onConfirm} disabled={pending}>
+          {pending ? "Deleting…" : "Delete item"}
         </ActionButton>
       </div>
     </Modal>

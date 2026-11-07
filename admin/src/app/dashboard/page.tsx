@@ -9,8 +9,8 @@ import {
   RecentOrders,
   SummaryCards,
 } from "@/components/dashboard/dashboard-widgets";
+import { PeriodSelect } from "@/components/dashboard/period-select";
 
-/** Visual preview only. All figures live in a typed fixture until Laravel analytics APIs are connected. */
 export default function DashboardPage() {
   return (
     <div className="dashboard-page">
@@ -20,11 +20,7 @@ export default function DashboardPage() {
           <h1>Dashboard</h1>
           <p>Welcome to your GlowCare workspace.</p>
         </div>
-        <div className="dashboard-date">Preview period · Last 7 days</div>
-      </div>
-      <div className="preview-notice" role="status">
-        <strong>Design preview</strong> · Sample metrics and order records are
-        illustrative. No live business analytics are connected yet.
+        <PeriodSelect />
       </div>
       <div className="dashboard-columns">
         <div className="dashboard-primary">

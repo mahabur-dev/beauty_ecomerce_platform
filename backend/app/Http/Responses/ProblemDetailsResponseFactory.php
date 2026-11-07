@@ -9,6 +9,7 @@ final class ProblemDetailsResponseFactory
 {
     /**
      * @param  array<string, mixed>  $extensions
+     * @param  array<string, string|int>  $headers
      */
     public function make(
         Request $request,
@@ -16,6 +17,7 @@ final class ProblemDetailsResponseFactory
         string $title,
         string $detail,
         array $extensions = [],
+        array $headers = [],
     ): JsonResponse {
         $problem = [
             'type' => 'about:blank',
@@ -30,7 +32,7 @@ final class ProblemDetailsResponseFactory
         return response()->json(
             data: $problem,
             status: $status,
-            headers: ['Content-Type' => 'application/problem+json'],
+            headers: ['Content-Type' => 'application/problem+json', ...$headers],
         );
     }
 }

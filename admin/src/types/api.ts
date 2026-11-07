@@ -5,6 +5,7 @@ export interface ProblemDetails {
   detail?: string;
   instance?: string;
   request_id?: string;
+  retry_after?: number;
   errors?: Record<string, string[]>;
 }
 

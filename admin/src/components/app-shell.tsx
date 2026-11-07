@@ -200,7 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="sidebar-footer">
           <span className="sidebar-footer-dot" /> GlowCare Workspace{" "}
-          <small>v1 · Design preview</small>
+          <small>v1.0 · Connected</small>
         </div>
       </aside>
       <div className="admin-workspace">
@@ -235,15 +235,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="header-actions">
-            <span className="header-divider" />
-            <span className="header-environment">Design preview</span>
-            <span className="header-divider" />
             <div
               className="header-icon"
               title="Notifications will be integrated later"
             >
               <Icon name="bell" size={19} />
             </div>
+            <span className="header-divider" />
             <div className="avatar" aria-hidden="true">
               {user?.name?.slice(0, 1).toUpperCase() ?? "A"}
             </div>

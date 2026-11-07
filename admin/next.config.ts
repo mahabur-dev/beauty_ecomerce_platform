@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    useTypeScriptCli: false,
+  },
   outputFileTracingRoot: process.cwd(),
   turbopack: { root: process.cwd() },
   async headers() {

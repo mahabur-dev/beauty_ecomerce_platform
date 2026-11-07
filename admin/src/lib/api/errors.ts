@@ -31,3 +31,36 @@ export class ApiResponseError extends Error {
     this.cause = cause;
   }
 }
+
+export class ApiContractError extends Error {
+  readonly cause: unknown;
+
+  constructor(cause: unknown) {
+    super("The API returned an unexpected response.");
+    this.name = "ApiContractError";
+    this.cause = cause;
+  }
+}
+
+export function apiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+): string {
+  if (error instanceof ApiError) {
+    const validation = error.problem.errors
+      ? Object.values(error.problem.errors).flat()[0]
+      : undefined;
+    if (validation) return validation;
+
+    if (error.problem.status === 429) {
+      const retryAfter = error.problem.retry_after;
+      return retryAfter !== undefined
+        ? `Too many requests. Please try again in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`
+        : "Too many requests. Please wait a moment and try again.";
+    }
+
+    return error.problem.detail ?? error.problem.title;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+}

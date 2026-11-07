@@ -26,28 +26,34 @@ export function clearCsrfCookie(): void {
   }
 }
 
-export async function ensureCsrfCookie(): Promise<void> {
-  if (readCookie("XSRF-TOKEN")) return;
+export async function ensureCsrfCookie(forceRefresh = false): Promise<void> {
+  if (!forceRefresh && readCookie("XSRF-TOKEN")) return;
 
-  csrfRequest ??= fetch(
-    `${env.apiOrigin.replace(/\/$/, "")}/sanctum/csrf-cookie`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    },
-  )
-    .then((response) => {
-      if (!response.ok)
+  csrfRequest ??= (async () => {
+    try {
+      const response = await fetch(
+        `${env.apiOrigin.replace(/\/$/, "")}/sanctum/csrf-cookie`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        },
+      );
+
+      if (!response.ok) {
         throw new Error(`CSRF initialization failed with ${response.status}`);
-    })
-    .catch((error: unknown) => {
-      resetCsrfState();
+      }
+    } catch (error) {
       throw new ApiNetworkError(error);
-    });
+    } finally {
+      // Deduplicate only concurrent requests. If the browser later expires the
+      // cookie, the next mutation must be able to initialize CSRF again.
+      resetCsrfState();
+    }
+  })();
 
   return csrfRequest;
 }
