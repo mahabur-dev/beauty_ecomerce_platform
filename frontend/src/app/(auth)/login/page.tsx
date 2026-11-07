@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
-import { AuthCard, AuthPage, LoginForm } from "@/features/auth";
+import {
+  AuthCard,
+  AuthPage,
+  AuthRouteFallback,
+  LoginForm,
+} from "@/features/auth";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -13,7 +19,15 @@ interface LoginPageProps {
   searchParams: Promise<{ next?: string | string[] }>;
 }
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default function LoginPage({ searchParams }: LoginPageProps) {
+  return (
+    <Suspense fallback={<AuthRouteFallback />}>
+      <LoginContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function LoginContent({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextPath = Array.isArray(params.next) ? params.next[0] : params.next;
 

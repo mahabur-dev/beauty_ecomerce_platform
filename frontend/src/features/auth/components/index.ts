@@ -1,6 +1,7 @@
 export * from "./account-actions";
 export * from "./auth-card";
 export * from "./auth-page";
+export * from "./auth-route-fallback";
 export * from "./forgot-password-form";
 export * from "./header-account";
 export * from "./login-form";

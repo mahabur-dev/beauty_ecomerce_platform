@@ -61,6 +61,6 @@ Before packaging, verify that Pint, Larastan, SQLite tests, and isolated MySQL t
 
 ## Explicitly deferred
 
-- Storefront and admin Next.js applications, pending the supplied visual design.
+- Final admin visual system and dashboard screens, pending the supplied visual design. The independent `admin/` application foundation is available.
 - Cart, checkout, order, payment, inventory reservation, review, coupon, return, commission, and payout modules.
 - Product PDF endpoint until document ownership and authenticated signed-delivery policy are finalized.

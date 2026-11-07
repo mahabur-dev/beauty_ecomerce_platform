@@ -10,7 +10,7 @@ export function SearchForm({ className, compact = false }: SearchFormProps) {
   const inputId = useId();
 
   return (
-    <form action="/search" role="search" className={className}>
+    <form action="/products" role="search" className={className}>
       <div className="border-brand-100 bg-surface-elevated focus-within:border-brand-400 focus-within:ring-brand-100 flex h-11 items-center rounded-full border pl-4 transition focus-within:ring-4">
         <label htmlFor={inputId} className="sr-only">
           Search products, brands and categories
@@ -18,7 +18,7 @@ export function SearchForm({ className, compact = false }: SearchFormProps) {
         <input
           id={inputId}
           type="search"
-          name="q"
+          name="search"
           placeholder={
             compact ? "Search products..." : "Search for products..."
           }

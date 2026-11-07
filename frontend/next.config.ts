@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   cacheComponents: true,
   partialPrefetching: true,
+  outputFileTracingRoot: process.cwd(),
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     remotePatterns: [
       {

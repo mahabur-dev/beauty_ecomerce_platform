@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { AuthCard, AuthPage, VerifyEmailPanel } from "@/features/auth";
+import {
+  AuthCard,
+  AuthPage,
+  AuthRouteFallback,
+  VerifyEmailPanel,
+} from "@/features/auth";
 
 export const metadata: Metadata = {
   title: "Verify email",
@@ -16,9 +22,17 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function VerifyEmailPage({
+export default function VerifyEmailPage({
   searchParams,
 }: VerifyEmailPageProps) {
+  return (
+    <Suspense fallback={<AuthRouteFallback />}>
+      <VerifyEmailContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function VerifyEmailContent({ searchParams }: VerifyEmailPageProps) {
   const params = await searchParams;
   const id = first(params.id);
   const hash = first(params.hash);

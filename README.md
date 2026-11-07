@@ -8,7 +8,7 @@ API-first beauty-commerce platform with a Laravel backend and an independently d
 backend/      Laravel 13 API
 docs/         Architecture, decisions, and API documentation
 frontend/     Next.js customer storefront
-admin/        Reserved for the administration application
+admin/        Independent Next.js administration application
 ```
 
 ## Local requirements
@@ -41,6 +41,8 @@ API URL: `http://localhost:8000/api/v1/health`
 Mailpit dashboard: `http://localhost:8025`
 
 Frontend setup and commands: [Frontend README](frontend/README.md)
+
+Admin setup and commands: [Admin README](admin/README.md)
 
 API documentation: [Phase 1 API reference](docs/api/phase-1-api-reference.md)
 
