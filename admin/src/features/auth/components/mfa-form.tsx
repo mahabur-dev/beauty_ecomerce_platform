@@ -32,8 +32,22 @@ export function MfaForm({ mode }: { mode: "setup" | "challenge" }) {
       .then((result) => {
         if (active) setSetup(result);
       })
-      .catch(() => {
-        if (active) setError("Unable to initialize MFA. Sign in again.");
+      .catch((caught: unknown) => {
+        if (!active) return;
+        if (
+          caught instanceof ApiError &&
+          (caught.problem.status === 401 || caught.problem.status === 419)
+        ) {
+          router.replace(
+            `/login?next=${encodeURIComponent(safeInternalPath(params.get("next")))}`,
+          );
+          return;
+        }
+        setError(
+          caught instanceof ApiError
+            ? caught.message
+            : "Unable to initialize MFA. Sign in again.",
+        );
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -41,7 +55,7 @@ export function MfaForm({ mode }: { mode: "setup" | "challenge" }) {
     return () => {
       active = false;
     };
-  }, [mode]);
+  }, [mode, params, router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +91,15 @@ export function MfaForm({ mode }: { mode: "setup" | "challenge" }) {
       client.setQueryData(currentAdminQuery.queryKey, result.user);
       router.replace(safeInternalPath(params.get("next")) as Route);
     } catch (caught) {
+      if (
+        caught instanceof ApiError &&
+        (caught.problem.status === 401 || caught.problem.status === 419)
+      ) {
+        router.replace(
+          `/login?next=${encodeURIComponent(safeInternalPath(params.get("next")))}`,
+        );
+        return;
+      }
       setError(
         caught instanceof ApiError
           ? caught.message

@@ -1,5 +1,38 @@
 import { z } from "zod";
 
+export const adminRoleSchema = z.enum(["super_admin", "catalog_manager"]);
+
+export const adminUserSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1),
+  email: z.email(),
+  email_verified: z.boolean(),
+  is_active: z.boolean(),
+  vendor_id: z.number().int().positive().nullable(),
+  roles: z.array(z.union([adminRoleSchema, z.literal("customer")])),
+  mfa_enabled: z.boolean(),
+});
+
+export const adminLoginResponseSchema = z.object({
+  next: z.enum(["mfa_setup", "mfa_challenge"]),
+});
+
+export const mfaSetupResponseSchema = z.object({
+  secret: z.string().min(1),
+  provisioning_uri: z.string().startsWith("otpauth://"),
+});
+
+export const authenticatedAdminResponseSchema = z.object({
+  user: adminUserSchema,
+});
+
+export const mfaConfirmationResponseSchema =
+  authenticatedAdminResponseSchema.extend({
+    recovery_codes: z.array(z.string().min(1)).min(1),
+  });
+
+export const adminResourceResponseSchema = z.object({ data: adminUserSchema });
+
 export const adminLoginSchema = z.object({
   email: z
     .string()

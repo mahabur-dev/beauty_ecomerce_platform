@@ -30,10 +30,25 @@ async function responseBody(response: Response): Promise<unknown> {
 }
 
 function problemDetails(response: Response, body: unknown): ProblemDetails {
+  const retryAfterHeader = Number.parseInt(
+    response.headers.get("Retry-After") ?? "",
+    10,
+  );
+  const retryAfter = Number.isFinite(retryAfterHeader)
+    ? Math.max(0, retryAfterHeader)
+    : undefined;
+
   if (typeof body === "object" && body !== null && "title" in body) {
     const candidate = body as Partial<ProblemDetails>;
     if (typeof candidate.title === "string") {
-      return { ...candidate, title: candidate.title, status: response.status };
+      return {
+        ...candidate,
+        title: candidate.title,
+        status: response.status,
+        ...(candidate.retry_after === undefined && retryAfter !== undefined
+          ? { retry_after: retryAfter }
+          : {}),
+      };
     }
   }
 
@@ -56,12 +71,14 @@ function problemDetails(response: Response, body: unknown): ProblemDetails {
     return {
       title: message ?? response.statusText ?? "Request failed",
       status: response.status,
+      ...(retryAfter !== undefined ? { retry_after: retryAfter } : {}),
       ...(validErrors ? { errors: validErrors } : {}),
     };
   }
   return {
     title: response.statusText || "Request failed",
     status: response.status,
+    ...(retryAfter !== undefined ? { retry_after: retryAfter } : {}),
     ...(typeof body === "string" ? { detail: body } : {}),
   };
 }
@@ -70,10 +87,19 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
+  return executeRequest<T>(path, options, true, false);
+}
+
+async function executeRequest<T>(
+  path: string,
+  options: ApiRequestOptions,
+  allowCsrfRetry: boolean,
+  forceCsrfRefresh: boolean,
+): Promise<T> {
   const method = (options.method ?? "GET").toUpperCase();
   const requiresCsrf =
     !safeMethods.has(method) && options.initializeCsrf !== false;
-  if (requiresCsrf) await ensureCsrfCookie();
+  if (requiresCsrf) await ensureCsrfCookie(forceCsrfRefresh);
 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
@@ -102,6 +128,9 @@ export async function apiRequest<T>(
   }
 
   const parsedBody = await responseBody(response);
+  if (response.status === 419 && requiresCsrf && allowCsrfRetry) {
+    return executeRequest<T>(path, options, false, true);
+  }
   if (!response.ok) throw new ApiError(problemDetails(response, parsedBody));
   return parsedBody as T;
 }

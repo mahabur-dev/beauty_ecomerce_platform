@@ -26,11 +26,14 @@ export type IconName =
   | "award"
   | "warning"
   | "refresh"
+  | "cancel"
   | "heart"
   | "sparkles"
   | "lock"
   | "eye"
-  | "eye-off";
+  | "eye-off"
+  | "check"
+  | "filter";
 
 const paths: Record<IconName, React.ReactNode> = {
   dashboard: (
@@ -157,6 +160,12 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M20 7v5h-5M4 17v-5h5M5 9a8 8 0 0 1 14-2l1 1M4 16l1 1a8 8 0 0 0 14-2" />
     </>
   ),
+  cancel: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15 9-6 6M9 9l6 6" />
+    </>
+  ),
   heart: (
     <path d="M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-3 4 1 8 8 15 7-7 11-11 8-15Z" />
   ),
@@ -185,6 +194,8 @@ const paths: Record<IconName, React.ReactNode> = {
       <line x1="2" x2="22" y1="2" y2="22" />
     </>
   ),
+  check: <polyline points="20 6 9 17 4 12" />,
+  filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
 };
 
 export function Icon({

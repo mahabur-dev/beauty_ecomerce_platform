@@ -13,6 +13,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -103,6 +104,24 @@ return Application::configure(basePath: dirname(__DIR__))
                 status: Response::HTTP_FORBIDDEN,
                 title: 'Forbidden',
                 detail: 'You are not authorized to perform this action.',
+            );
+        });
+
+        $exceptions->render(function (ThrottleRequestsException $exception, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $headers = $exception->getHeaders();
+            $retryAfter = max(1, (int) ($headers['Retry-After'] ?? 60));
+
+            return app(ProblemDetailsResponseFactory::class)->make(
+                request: $request,
+                status: Response::HTTP_TOO_MANY_REQUESTS,
+                title: 'Rate limit exceeded',
+                detail: "Too many requests. Try again in {$retryAfter} seconds.",
+                extensions: ['retry_after' => $retryAfter],
+                headers: $headers,
             );
         });
 

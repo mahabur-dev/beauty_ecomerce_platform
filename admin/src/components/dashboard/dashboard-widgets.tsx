@@ -56,21 +56,7 @@ export function MetricCards() {
               {metric.delta}
             </span>
           </div>
-          <div className="metric-caption">
-            {metric.caption}
-            <svg
-              className="metric-spark"
-              viewBox="0 0 95 28"
-              aria-hidden="true"
-            >
-              <path
-                d="M0 23 C12 5 20 25 33 13 S53 6 65 12 S80 2 95 5"
-                fill="none"
-                stroke="#f22983"
-                strokeWidth="2"
-              />
-            </svg>
-          </div>
+          <div className="metric-caption">{metric.caption}</div>
         </article>
       ))}
     </div>
@@ -390,6 +376,11 @@ export function SummaryCards() {
         <Icon name="warning" />
         <strong>4</strong>
         <span>Low-stock items</span>
+      </div>
+      <div className="summary-tile">
+        <Icon name="cancel" />
+        <strong>18</strong>
+        <span>Cancelled orders</span>
       </div>
     </div>
   );

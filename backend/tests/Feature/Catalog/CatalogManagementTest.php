@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Catalog;
 
+use App\Domain\Catalog\Enums\ProductStatus;
 use App\Domain\Catalog\Models\Brand;
 use App\Domain\Catalog\Models\Category;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Identity\Enums\RoleCode;
 use App\Domain\Identity\Models\Role;
 use App\Domain\Identity\Models\User;
+use App\Domain\Shared\Enums\RecordStatus;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -180,6 +182,58 @@ final class CatalogManagementTest extends TestCase
             'action' => 'catalog.brand_restored',
             'subject_id' => $brandId,
         ]);
+    }
+
+    public function test_catalog_overview_consolidates_summary_and_active_options(): void
+    {
+        $this->authenticateAdministrator(RoleCode::SuperAdmin);
+        $root = Category::factory()->create(['status' => RecordStatus::Active]);
+        $child = Category::factory()->create([
+            'parent_id' => $root->getKey(),
+            'status' => RecordStatus::Active,
+        ]);
+        Category::factory()->create(['status' => RecordStatus::Inactive]);
+        $activeBrand = Brand::factory()->create(['status' => RecordStatus::Active]);
+        Brand::factory()->create(['status' => RecordStatus::Inactive]);
+        Product::factory()->create([
+            'primary_category_id' => $child->getKey(),
+            'brand_id' => $activeBrand->getKey(),
+            'status' => ProductStatus::Draft,
+        ]);
+
+        $this->getJson('/api/v1/admin/catalog/summary')
+            ->assertOk()
+            ->assertJsonPath('data.products.total', 1)
+            ->assertJsonPath('data.products.draft', 1)
+            ->assertJsonPath('data.categories.total', 2)
+            ->assertJsonPath('data.categories.active', 1)
+            ->assertJsonPath('data.categories.inactive', 1)
+            ->assertJsonPath('data.subcategories.total', 1);
+
+        $this->getJson('/api/v1/admin/catalog/options')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.categories')
+            ->assertJsonCount(1, 'data.subcategories')
+            ->assertJsonCount(1, 'data.brands')
+            ->assertJsonPath('data.categories.0.id', $root->getKey())
+            ->assertJsonPath('data.brands.0.id', $activeBrand->getKey());
+    }
+
+    public function test_catalog_reads_and_writes_use_independent_rate_limit_buckets(): void
+    {
+        $this->authenticateAdministrator(RoleCode::SuperAdmin);
+        config()->set('catalog.rate_limits.write_per_minute', 2);
+
+        $this->postJson('/api/v1/admin/categories', [])->assertUnprocessable();
+        $this->postJson('/api/v1/admin/categories', [])->assertUnprocessable();
+        $limited = $this->postJson('/api/v1/admin/categories', [])
+            ->assertTooManyRequests()
+            ->assertJsonPath('title', 'Rate limit exceeded');
+
+        self::assertGreaterThan(0, (int) $limited->headers->get('Retry-After'));
+        self::assertGreaterThan(0, (int) $limited->json('retry_after'));
+
+        $this->getJson('/api/v1/admin/categories')->assertOk();
     }
 
     private function authenticateAdministrator(RoleCode $roleCode): User
