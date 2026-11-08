@@ -1,73 +1,194 @@
-# Beauty Commerce Platform
+# GlowCare — Beauty Commerce Platform
 
-API-first beauty-commerce platform with a Laravel backend and an independently deployable Next.js customer storefront. The administration application will remain separate.
+An enterprise-grade, API-first beauty and skincare commerce platform engineered for high-performance retail in South Asia. Built with a **Laravel 13** domain-driven core API, an independently deployable **Next.js 16 (App Router)** customer storefront, and a dedicated **Next.js 16** administrative portal.
 
-## Repository layout
+---
+
+## 1. System Architecture
+
+GlowCare follows a headless, decoupled monorepo architecture where the API, customer storefront, and back-office administrative portal maintain distinct deployment lifecycles and security boundaries.
+
+```mermaid
+flowchart TD
+    subgraph Clients["Clients & Presentation"]
+        Storefront["Customer Storefront\n(Next.js 16 / Port 3000)\nPartial Prerendering (PPR)"]
+        AdminPortal["Admin Operations Portal\n(Next.js 16 / Port 3001)\nMandatory TOTP MFA"]
+    end
+
+    subgraph Gateway["Edge & Ingress"]
+        Nginx["Nginx Reverse Proxy\nDynamic Port Binding / Gzip"]
+    end
+
+    subgraph CoreBackend["Core Backend (Laravel 13 / PHP 8.4)"]
+        SanctumAuth["Session & Sanctum Auth\nHttpOnly Cookies / CSRF"]
+        
+        subgraph Domains["Domain Layer"]
+            Identity["Identity Domain\nRBAC / Invitations / Audit Logs"]
+            Catalog["Catalog Domain\nProducts / Variants / Facets / Hierarchy"]
+            Media["Media Domain\nCloudinary Storage / Image Pipelines"]
+        end
+    end
+
+    subgraph Infrastructure["Infrastructure & Persistence"]
+        MySQL[("MySQL 8.4\nRelational Schema")]
+        Redis[("Redis\nCache & Rate Limiting")]
+        Cloudinary["Cloudinary CDN\nOptimized Delivery"]
+    end
+
+    Storefront -->|REST / JSON| Gateway
+    AdminPortal -->|REST / JSON| Gateway
+    Gateway --> SanctumAuth
+    SanctumAuth --> Domains
+    Catalog --> MySQL
+    Identity --> MySQL
+    Catalog --> Redis
+    Media --> Cloudinary
+```
+
+---
+
+## 2. Monorepo Structure
 
 ```text
-backend/      Laravel 13 API
-docs/         Architecture, decisions, and API documentation
-frontend/     Next.js customer storefront
-admin/        Independent Next.js administration application
+beauty_ecomerce_platform/
+├── backend/          # Laravel 13 Core REST API (PHP 8.4, MySQL, Redis, Cloudinary)
+│   ├── app/Domain/   # DDD Domain modules (Catalog, Identity, Media)
+│   ├── docker/       # Production Nginx, PHP-FPM, Supervisor configs
+│   ├── Dockerfile    # Railway/Production single-container image
+│   └── railway.json  # Railway build & deploy configuration
+│
+├── frontend/         # Customer Storefront (Next.js 16, React 19, Tailwind CSS v4)
+│   ├── src/app/      # App Router pages (Home, Products, Categories, Brands)
+│   ├── src/features/ # Domain features (Catalog, Cart, Auth, Search)
+│   └── src/components/ ui / primitives (Multi-select, Dropdowns, Cards)
+│
+├── admin/            # Staff Operations Portal (Next.js 16, Tailwind CSS v4)
+│   ├── src/app/      # Admin routes (/dashboard, /login, /mfa)
+│   └── src/features/ # Staff management, catalog management, audit logs
+│
+├── docs/             # Technical specifications, ADRs & API contracts
+└── compose.yaml      # Unified local development environment
 ```
 
-## Local requirements
+---
 
-- Docker Desktop with Docker Compose
-- Git
+## 3. Key Technical Highlights
 
-The application runtime is containerized with PHP 8.4, Nginx, MySQL 8.4, Redis, and Mailpit. A host PHP installation is not required.
+- **Domain-Driven Backend:** Clean separation between `Catalog`, `Identity`, and `Media` domains with strict invariant enforcement and zero circular dependencies.
+- **Enterprise Security:** Mandatory TOTP Multi-Factor Authentication (MFA) for staff, expiring cryptographic invitations, stateful HttpOnly session cookies, and detailed RFC 9457 Problem Details error responses.
+- **Localized E-Commerce:** Built-in support for Bangladeshi Taka (`৳`), localized SKU/variant structures, and shade/attribute filtering.
+- **Next.js 16 Streaming & PPR:** Customer storefront utilizes Partial Prerendering with streaming `<Suspense>` boundaries to ensure zero blocking during page hydration.
+- **Advanced Multi-Select Filtering:** Accessible, reusable multi-select dropdowns for subcategories and brands with instant keyword search and zero border-overlap issues.
+- **Turnkey Production Deployment:** Single-container Docker image with Nginx, PHP-FPM, and Supervisor optimized for **Railway**, alongside automated migration hooks and `/up` health checks.
 
-## First-time setup
+---
 
-1. Copy `.env.example` to `.env` and replace the local database password.
-2. Copy `backend/.env.example` to `backend/.env` and use the same database name, username, and password.
-3. Build and start the services: `docker compose up -d --build`.
-4. Generate an application key: `docker compose exec app php artisan key:generate`.
-5. Run migrations: `docker compose exec app php artisan migrate`.
-6. Seed system roles: `docker compose exec app php artisan db:seed --class=RoleSeeder`.
-7. Provision the first administrator interactively: `docker compose exec app php artisan identity:provision-super-admin`.
+## 4. Prerequisites
 
-Administrator accounts cannot register publicly. The initial super administrator is provisioned from the CLI; subsequent staff use expiring invitations. Every administrator must enroll TOTP MFA before an admin session is issued.
+| Tool | Version Requirement | Purpose |
+| :--- | :--- | :--- |
+| **PHP** | `^8.3` (PHP 8.4 recommended) | Backend CLI and testing |
+| **Composer** | `^2.7` | PHP package management |
+| **Node.js** | `>= 22.12.0` | Frontend and Admin runtimes |
+| **npm** | `>= 10.0.0` | JavaScript package management |
+| **MySQL** | `8.4` or `8.0` | Primary relational database |
+| **Docker Desktop** | Latest (optional) | Containerized local workflow |
 
-If a Windows-created bind mount reports that Laravel cannot write to `storage` or `bootstrap/cache`, run this once:
+---
 
-```powershell
-docker compose exec --user root app chown -R app:app storage bootstrap/cache
+## 5. Local Development Quickstart
+
+### Method A: Docker Compose (All-in-One)
+
+1. **Clone the repository and copy environment configurations:**
+   ```bash
+   cp .env.example .env
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env.local
+   cp admin/.env.example admin/.env.local
+   ```
+
+2. **Boot the infrastructure containers:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Initialize the backend database:**
+   ```bash
+   docker compose exec app php artisan key:generate
+   docker compose exec app php artisan migrate
+   docker compose exec app php artisan db:seed --class=RoleSeeder
+   docker compose exec app php artisan identity:provision-super-admin
+   ```
+
+---
+
+### Method B: Native Bare-Metal Setup
+
+#### Step 1: Backend Setup
+```bash
+cd backend
+cp .env.example .env
+composer install
+
+# Update DB_* variables in .env with your local MySQL credentials
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+php artisan serve --port=8000
+```
+> The API will be available at `http://localhost:8000`.
+
+#### Step 2: Customer Storefront Setup
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+> The storefront will run at `http://localhost:3000`.
+
+#### Step 3: Admin Operations Portal Setup
+```bash
+cd admin
+cp .env.example .env.local
+npm install
+npm run dev
+```
+> The admin portal will run at `http://localhost:3001`.
+
+---
+
+## 6. Monorepo Quality Matrix
+
+Run quality gates across the applications before opening a pull request:
+
+```bash
+# Backend Quality Checks (Pint formatting, Larastan, PHPUnit)
+cd backend && composer test
+
+# Frontend Quality Checks (ESLint, TypeScript strict, Vitest, Webpack build)
+cd frontend && npm run quality
+
+# Admin Quality Checks (ESLint, TypeScript, Vitest, Webpack build)
+cd admin && npm run quality
 ```
 
-API URL: `http://localhost:8000/api/v1/health`
+---
 
-Mailpit dashboard: `http://localhost:8025`
+## 7. Production Deployment Overview
 
-Frontend setup and commands: [Frontend README](frontend/README.md)
+- **Backend:** Deployed to **Railway** using [`backend/Dockerfile`](backend/Dockerfile) and [`backend/railway.json`](backend/railway.json). Handles dynamic `$PORT`, executes automated migrations on launch, and reports health via `/up`.
+- **Frontend & Admin:** Deployed independently to **Vercel** as static + Serverless/Edge Next.js applications targeting the Railway backend API URL.
 
-Admin setup and commands: [Admin README](admin/README.md)
+For detailed configuration steps, consult the dedicated package documentation:
+- [Backend Documentation](backend/README.md)
+- [Customer Storefront Documentation](frontend/README.md)
+- [Admin Portal Documentation](admin/README.md)
+- [Architecture & API Decision Records](docs/)
 
-API documentation: [Phase 1 API reference](docs/api/phase-1-api-reference.md)
+---
 
-Submission runbook: [Backend checklist](docs/submission/backend-checklist.md)
+## 8. License
 
-## Quality checks
-
-```powershell
-docker compose exec app composer quality
-```
-
-The quality command runs formatting checks, Larastan static analysis, and the automated test suite.
-
-For a clean MySQL schema/seed verification without touching the persistent development database:
-
-```powershell
-docker compose --profile test up -d --wait mysql-test
-docker compose run --rm --no-deps -e DB_HOST=mysql-test -e DB_DATABASE=beauty_commerce_test -e DB_USERNAME=beauty_test -e DB_PASSWORD=local-test-only app php artisan migrate --seed --force
-docker compose --profile test stop mysql-test
-```
-
-The test database stores its data in container `tmpfs`; it does not use the persistent development volume.
-
-Architecture notes: [Phase 3 domain schema](docs/architecture/phase-03-domain-schema.md), [Phase 4 identity and access](docs/architecture/phase-04-identity-access.md), [Phase 5 category/brand management](docs/architecture/phase-05-category-brand-management.md), [Phase 6 product/variant/media](docs/architecture/phase-06-product-variant-media.md), and [Phase 7 public catalog](docs/architecture/phase-07-public-catalog.md).
-
-Frontend architecture: [Phase 1 foundation](docs/architecture/frontend-phase-01-foundation.md).
-
-# beauty_ecomerce_platform
+This repository is proprietary software developed for the GlowCare Beauty Commerce Platform. All rights reserved.
