@@ -1,58 +1,185 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# GlowCare — Core REST API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+The foundational headless commerce engine for the GlowCare platform. Engineered with **Laravel 13** and **PHP 8.4**, following Domain-Driven Design (DDD) principles to deliver high-throughput, secure, and extensible commerce APIs.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 1. Domain Architecture
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The application core resides in `app/Domain/` and is strictly partitioned into distinct bounded contexts:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+app/Domain/
+├── Catalog/             # Catalog management & public discovery
+│   ├── Actions/         # Isolated mutation actions (ManageCategories, ManageBrands, ManageProducts)
+│   ├── Models/          # Category (self-parent guard), Brand, Product, ProductVariant, Attribute
+│   └── Queries/         # Read queries (PublicProductQuery, AdminCatalogOverview)
+│
+├── Identity/            # Authentication, RBAC, staff security
+│   ├── Actions/         # ProvisionSuperAdmin, IssueStaffInvitation, EnrollMfa, AuthenticateSession
+│   ├── Models/          # User, Role, Permission, StaffProfile, AuditLog
+│   └── Security/        # TOTP engine, session tracking, cryptographic tokens
+│
+└── Media/               # Asset ingestion and delivery
+    ├── Actions/         # ManageProductImages, CloudinaryMediaStorage
+    └── Contracts/       # MediaStorageDriver interface
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 2. Technology Stack
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- **Framework:** Laravel 13 (`^13.17`)
+- **PHP Version:** PHP 8.4 (with extensions: `bcmath`, `exif`, `gd`, `intl`, `opcache`, `pcntl`, `pdo_mysql`, `pdo_pgsql`, `redis`, `zip`)
+- **Database:** MySQL 8.4 (with PostgreSQL compatibility)
+- **Caching & Queues:** Redis / Database driver
+- **Media Delivery:** Cloudinary PHP SDK (`^3.0`)
+- **Authentication:** Laravel Sanctum (`^4.3`) with stateful cookies + TOTP MFA (`spomky-labs/otphp`)
+- **Error Handling:** RFC 9457 Problem Details specification
+- **Containerization:** Docker (PHP-FPM 8.4 + Nginx + Supervisord)
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 3. Local Development Setup
 
-## Security Vulnerabilities
+### Requirements
+- PHP 8.4+ and Composer 2
+- MySQL 8.0+ or 8.4
+- Redis (optional for local; cache falls back to database)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Installation Steps
 
-## License
+1. **Install dependencies:**
+   ```bash
+   composer install
+   ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   ```
+   Open `.env` and set your database credentials:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=beauty_commerce
+   DB_USERNAME=root
+   DB_PASSWORD=your_password
+   ```
+
+3. **Generate application encryption key:**
+   ```bash
+   php artisan key:generate
+   ```
+
+4. **Execute database migrations:**
+   ```bash
+   php artisan migrate
+   ```
+
+5. **Seed initial roles and catalog data:**
+   ```bash
+   php artisan db:seed
+   ```
+
+6. **Provision the first Super Administrator:**
+   Staff accounts cannot register publicly. Provision the initial super admin via the interactive CLI:
+   ```bash
+   php artisan identity:provision-super-admin
+   ```
+   Follow the prompts to enter an email, name, and strong password.
+
+7. **Start the development server:**
+   ```bash
+   php artisan serve --host=127.0.0.1 --port=8000
+   ```
+   - API Healthcheck: `http://127.0.0.1:8000/api/v1/health`
+   - Platform Healthcheck: `http://127.0.0.1:8000/up`
+
+---
+
+## 4. API Endpoints Overview
+
+All public and administrative endpoints are versioned under `/api/v1`:
+
+### Public Catalog (`/api/v1/catalog`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/catalog/products` | Paginated product listing with multi-select subcategories, brands, shades, price filtering, and sorting |
+| `GET` | `/api/v1/catalog/products/{slug}` | Detailed product view including images, attributes, variants, and reviews |
+| `GET` | `/api/v1/catalog/categories` | Complete category hierarchy and tree structure |
+| `GET` | `/api/v1/catalog/categories/{slug}` | Individual category details |
+| `GET` | `/api/v1/catalog/brands` | Active brand listings with product counts |
+| `GET` | `/api/v1/catalog/brands/{slug}` | Individual brand details |
+
+### Authentication & Identity (`/api/v1/auth`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/sanctum/csrf-cookie` | Initializes CSRF token cookie for single-page applications |
+| `POST` | `/api/v1/auth/customer/login` | Customer email/password session authentication |
+| `POST` | `/api/v1/auth/customer/register` | Customer registration |
+| `POST` | `/api/v1/auth/admin/login` | Staff first-step credentials verification (triggers MFA challenge) |
+| `POST` | `/api/v1/auth/admin/mfa/challenge` | Verifies 6-digit TOTP code and grants admin session |
+| `POST` | `/api/v1/auth/logout` | Revokes authenticated session |
+
+---
+
+## 5. Security & Authentication Architecture
+
+1. **Stateful Session Cookies:** The API utilizes Laravel Sanctum with `HttpOnly`, `SameSite=Lax`, and `Secure` cookies. Access tokens are never exposed to browser `localStorage` or `sessionStorage`.
+2. **Reverse Proxy Trust:** Configured with `$middleware->trustProxies(at: '*')` to ensure SSL headers (`X-Forwarded-Proto: https`) forwarded by Railway or Cloudflare are properly trusted.
+3. **Mandatory Staff MFA:** All administrative accounts require Time-based One-Time Password (TOTP) enrollment. Direct administrative access without MFA is rejected at the middleware boundary.
+4. **RFC 9457 Problem Details:** All API exceptions (validation errors, domain exceptions, unauthorized access) respond with standard JSON `application/problem+json` schemas.
+
+---
+
+## 6. Automated Testing & Code Quality
+
+The backend includes a comprehensive automated test suite verifying domain rules, catalog queries, multi-filtering, and security bounds:
+
+```bash
+# Run all feature and unit tests (35+ test cases)
+php artisan test
+
+# Run static analysis (Larastan Level 6+)
+./vendor/bin/phpstan analyse
+
+# Check and fix code style (Laravel Pint)
+./vendor/bin/pint --test
+```
+
+---
+
+## 7. Production Deployment (Railway)
+
+The backend includes a zero-configuration container setup tailored specifically for **Railway**.
+
+### Container Architecture
+- **Base Image:** `php:8.4-fpm-bookworm` + **Nginx** + **Supervisord**.
+- **Dynamic Port Ingestion:** Uses `entrypoint.sh` and `envsubst` to dynamically bind Nginx to Railway's assigned `$PORT`.
+- **Automated Lifecycle Hooks:** On every container boot, `entrypoint.sh` runs:
+  1. Storage symlink creation (`storage:link`)
+  2. Database migrations (`php artisan migrate --force`)
+  3. Production cache optimizations (`config:cache`, `route:cache`, `view:cache`)
+  4. Launches Supervisord to manage PHP-FPM and Nginx.
+
+### How to Deploy on Railway
+
+1. **Create Project & Add MySQL:**
+   - On [Railway.app](https://railway.app), create a new project and add a **MySQL** database service.
+2. **Connect Repository:**
+   - Choose **Deploy from GitHub repo** and select this repository.
+3. **Configure Service Settings:**
+   - In your backend service **Settings** > **General**:
+   - Set **Root Directory** to `/backend` (required for monorepo detection).
+4. **Set Environment Variables:**
+   - Go to the **Variables** tab and configure your production values using the template provided in [`.env.production.example`](.env.production.example).
+
+> [!TIP]
+> **Railway Template Variables vs Real Values:**
+> - **Railway Template Variables (`${{MySQL.MYSQLHOST}}`, `${{MySQL.MYSQLPASSWORD}}`):** If your MySQL service in Railway is named `MySQL`, keep these as-is! Railway will automatically resolve and inject the credentials at runtime.
+> - **Real Values:** If your database is external (e.g. AWS RDS, PlanetScale) or has a custom service name, replace the `${{...}}` with the actual host, user, port, and password. Both methods work seamlessly.
+
+5. **Deploy & Verify:**
+   - Railway will build the Docker container and verify the deployment via `/up`. Once healthy, link your custom domain or use Railway's public URL (`https://*.up.railway.app`).
