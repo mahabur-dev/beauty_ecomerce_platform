@@ -47,6 +47,18 @@ function parseAttributeIds(
   return ids.length > 0 ? [...new Set(ids)] : undefined;
 }
 
+function parseStringList(
+  value: string | string[] | undefined,
+): string[] | undefined {
+  const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+  const entries = rawValues
+    .flatMap((entry) => entry.split(","))
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  return entries.length > 0 ? [...new Set(entries)] : undefined;
+}
+
 export function parseCatalogQuery(
   params: Record<string, string | string[] | undefined>,
   defaults: Partial<
@@ -62,12 +74,35 @@ export function parseCatalogQuery(
       ? requestedMaxPrice
       : undefined;
 
+  const parsedSubcategories = parseStringList(
+    params.subcategories ?? params["subcategories[]"] ?? params.subcategory,
+  );
+  const subcategories = defaults.subcategory
+    ? [defaults.subcategory]
+    : parsedSubcategories;
+  const subcategory =
+    defaults.subcategory ??
+    (subcategories && subcategories.length > 0
+      ? subcategories[0]
+      : optionalText(first(params.subcategory)));
+
+  const parsedBrands = parseStringList(
+    params.brands ?? params["brands[]"] ?? params.brand,
+  );
+  const brands = defaults.brand ? [defaults.brand] : parsedBrands;
+  const brand =
+    defaults.brand ??
+    (brands && brands.length > 0
+      ? brands[0]
+      : optionalText(first(params.brand)));
+
   return {
     search: optionalText(first(params.search)),
     category: defaults.category ?? optionalText(first(params.category)),
-    subcategory:
-      defaults.subcategory ?? optionalText(first(params.subcategory)),
-    brand: defaults.brand ?? optionalText(first(params.brand)),
+    subcategory,
+    subcategories,
+    brand,
+    brands,
     attributeValueIds: parseAttributeIds(
       params.attributes ?? params["attribute_value_ids[]"],
     ),
@@ -89,8 +124,23 @@ export function catalogQueryString(
 
   if (value.search) params.set("search", value.search);
   if (value.category) params.set("category", value.category);
-  if (value.subcategory) params.set("subcategory", value.subcategory);
-  if (value.brand) params.set("brand", value.brand);
+
+  if (value.subcategories && value.subcategories.length > 1) {
+    params.set("subcategories", value.subcategories.join(","));
+  } else if (value.subcategory) {
+    params.set("subcategory", value.subcategory);
+  } else if (value.subcategories && value.subcategories.length === 1 && value.subcategories[0]) {
+    params.set("subcategories", value.subcategories[0]);
+  }
+
+  if (value.brands && value.brands.length > 1) {
+    params.set("brands", value.brands.join(","));
+  } else if (value.brand) {
+    params.set("brand", value.brand);
+  } else if (value.brands && value.brands.length === 1 && value.brands[0]) {
+    params.set("brands", value.brands[0]);
+  }
+
   if (value.attributeValueIds?.length) {
     params.set("attribute_value_ids", value.attributeValueIds.join(","));
   }

@@ -30,7 +30,7 @@ export const dashboardDemo = {
     },
     {
       label: "Total sales",
-      value: "$50,354",
+      value: "৳50,354",
       delta: "+5.4%",
       positive: true,
       caption: "vs. previous period",
@@ -91,7 +91,7 @@ export const dashboardDemo = {
       customer: "Sarah Rahman",
       product: "Vitamin C Serum",
       quantity: 1,
-      total: "$120.00",
+      total: "৳1,200.00",
       status: "Confirmed",
     },
     {
@@ -99,7 +99,7 @@ export const dashboardDemo = {
       customer: "Mehedi Khan",
       product: "Hydrating Face Cream",
       quantity: 3,
-      total: "$75.00",
+      total: "৳750.00",
       status: "Shipped",
     },
     {
@@ -107,7 +107,7 @@ export const dashboardDemo = {
       customer: "Nusrat Tabassum",
       product: "Matte Lipstick",
       quantity: 2,
-      total: "$60.00",
+      total: "৳600.00",
       status: "Processing",
     },
   ],

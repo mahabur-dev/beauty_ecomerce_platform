@@ -1,14 +1,19 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Heart, Menu, ShoppingBag, UserRound } from "lucide-react";
 import { useState } from "react";
 
+import { isRouteActive } from "@/components/layout/primary-navigation";
 import { SearchForm } from "@/components/layout/search-form";
 import { Button, Modal } from "@/components/ui";
 import { customerNavigation, primaryNavigation } from "@/config/navigation";
 
 export function MobileNavigation() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <>
@@ -35,17 +40,26 @@ export function MobileNavigation() {
             Shop
           </p>
           <ul className="divide-line divide-y">
-            {primaryNavigation.map((item) => (
-              <li key={item.href}>
-                <a
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="text-ink hover:text-brand-700 block py-3.5 text-sm font-semibold transition-colors"
-                >
-                  {item.label}
-                </a>
-              </li>
-            ))}
+            {primaryNavigation.map((item) => {
+              const active = isRouteActive(pathname, item.href);
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href as Route}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setOpen(false)}
+                    className={
+                      active
+                        ? "text-brand-700 bg-brand-50 block rounded-xl px-3 py-3 text-sm font-bold"
+                        : "text-ink hover:text-brand-700 block px-3 py-3 text-sm font-semibold transition-colors"
+                    }
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
         <nav className="mt-7" aria-label="Mobile customer navigation">

@@ -53,6 +53,10 @@ final class Category extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['status' => RecordStatus::class];
+        return [
+            'parent_id' => 'integer',
+            'sort_order' => 'integer',
+            'status' => RecordStatus::class,
+        ];
     }
 }

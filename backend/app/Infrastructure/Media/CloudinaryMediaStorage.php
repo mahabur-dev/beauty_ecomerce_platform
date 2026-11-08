@@ -56,7 +56,11 @@ final class CloudinaryMediaStorage implements MediaStorage
 
     private function client(): Cloudinary
     {
-        $url = (string) config('media.cloudinary_url');
+        $url = trim((string) config('media.cloudinary_url'));
+
+        while (str_starts_with($url, 'CLOUDINARY_URL=')) {
+            $url = trim(substr($url, 15));
+        }
 
         if ($url === '') {
             throw new RuntimeException('Cloudinary credentials are not configured.');

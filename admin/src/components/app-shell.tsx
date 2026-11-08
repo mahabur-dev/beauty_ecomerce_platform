@@ -113,7 +113,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: user } = useAdmin();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const filtered = navigation
     .map((group) => ({
       ...group,
@@ -214,25 +213,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Icon name="menu" />
             </button>
-            <div className="global-search-wrap">
-              <button
-                type="button"
-                className="global-search"
-                onClick={() => setSearchOpen((s) => !s)}
-                aria-expanded={searchOpen}
-                aria-label="Global search availability"
-              >
-                <Icon name="search" size={17} />
-                <span>Search products, orders, customers...</span>
-                <kbd>⌘ K</kbd>
-              </button>
-              {searchOpen && (
-                <p className="search-popover" role="status">
-                  Global search will be available when the search API is
-                  integrated.
-                </p>
-              )}
-            </div>
           </div>
           <div className="header-actions">
             <div

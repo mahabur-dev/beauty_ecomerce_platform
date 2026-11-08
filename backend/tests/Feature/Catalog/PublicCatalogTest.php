@@ -73,6 +73,10 @@ final class PublicCatalogTest extends TestCase
             ->assertJsonPath('data.0.slug', 'ocean-lipstick')
             ->assertJsonMissing(['hidden-draft']);
 
+        $this->getJson('/api/v1/products?subcategories=lipstick,other-sub&brands=aurora,other-brand')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
         $this->getJson('/api/v1/products/ruby-matte')
             ->assertOk()
             ->assertJsonPath('data.variants.0.attribute_values.0.code', 'red')

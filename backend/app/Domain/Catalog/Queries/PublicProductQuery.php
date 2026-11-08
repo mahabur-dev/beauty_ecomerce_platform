@@ -37,7 +37,7 @@ final class PublicProductQuery
     }
 
     /**
-     * @param  array{search?: string|null, category?: string|null, subcategory?: string|null, brand?: string|null, attribute_value_ids?: list<int>, min_price?: numeric-string|null, max_price?: numeric-string|null, sort?: string|null}  $filters
+     * @param  array{search?: string|null, category?: string|null, subcategory?: string|null, subcategories?: list<string>, brand?: string|null, brands?: list<string>, attribute_value_ids?: list<int>, min_price?: numeric-string|null, max_price?: numeric-string|null, sort?: string|null}  $filters
      * @return Builder<Product>
      */
     public function filtered(array $filters): Builder
@@ -55,13 +55,15 @@ final class PublicProductQuery
             $slug = (string) $filters['category'];
             $query->whereHas('primaryCategory.parent', fn (Builder $parent) => $parent->where('slug', $slug));
         }
-        if (($filters['subcategory'] ?? null) !== null) {
-            $slug = (string) $filters['subcategory'];
-            $query->whereHas('primaryCategory', fn (Builder $category) => $category->where('slug', $slug));
+
+        $subcategories = $filters['subcategories'] ?? (isset($filters['subcategory']) && $filters['subcategory'] !== '' ? [$filters['subcategory']] : []);
+        if ($subcategories !== []) {
+            $query->whereHas('primaryCategory', fn (Builder $category) => $category->whereIn('slug', $subcategories));
         }
-        if (($filters['brand'] ?? null) !== null) {
-            $slug = (string) $filters['brand'];
-            $query->whereHas('brand', fn (Builder $brand) => $brand->where('slug', $slug));
+
+        $brands = $filters['brands'] ?? (isset($filters['brand']) && $filters['brand'] !== '' ? [$filters['brand']] : []);
+        if ($brands !== []) {
+            $query->whereHas('brand', fn (Builder $brand) => $brand->whereIn('slug', $brands));
         }
 
         $valueIds = $filters['attribute_value_ids'] ?? [];

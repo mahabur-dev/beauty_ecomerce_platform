@@ -5,15 +5,15 @@ export const productStatusSchema = z.enum(["draft", "active", "inactive"]);
 
 const nullableString = z.string().nullable();
 const categorySummarySchema = z.object({
-  id: z.number().int().positive(),
-  parent_id: z.number().int().positive().nullable(),
+  id: z.coerce.number().int().positive(),
+  parent_id: z.coerce.number().int().positive().nullable(),
   name: z.string(),
   slug: z.string(),
   description: nullableString,
   status: categoryStatusSchema,
-  sort_order: z.number().int().nonnegative(),
-  children_count: z.number().int().nonnegative().optional(),
-  products_count: z.number().int().nonnegative().optional(),
+  sort_order: z.coerce.number().int().nonnegative().catch(0).default(0),
+  children_count: z.coerce.number().int().nonnegative().optional(),
+  products_count: z.coerce.number().int().nonnegative().optional(),
   deleted_at: nullableString,
   created_at: nullableString,
   updated_at: nullableString,
@@ -25,19 +25,19 @@ export const categorySchema = categorySummarySchema.extend({
 });
 
 export const brandSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.coerce.number().int().positive(),
   name: z.string(),
   slug: z.string(),
   status: categoryStatusSchema,
-  products_count: z.number().int().nonnegative().optional(),
+  products_count: z.coerce.number().int().nonnegative().optional(),
   deleted_at: nullableString,
   created_at: nullableString,
   updated_at: nullableString,
 });
 
 export const productVariantSchema = z.object({
-  id: z.number().int().positive(),
-  product_id: z.number().int().positive(),
+  id: z.coerce.number().int().positive(),
+  product_id: z.coerce.number().int().positive(),
   sku: z.string().nullable(),
   barcode: z.string().nullable(),
   title: z.string(),
@@ -52,25 +52,25 @@ export const productVariantSchema = z.object({
 });
 
 export const productImageSchema = z.object({
-  id: z.number().int().positive(),
-  product_id: z.number().int().positive(),
-  product_variant_id: z.number().int().positive().nullable(),
+  id: z.coerce.number().int().positive(),
+  product_id: z.coerce.number().int().positive(),
+  product_variant_id: z.coerce.number().int().positive().nullable(),
   url: z.string().url(),
   format: z.string().nullable(),
-  bytes: z.number().int().nonnegative().nullable(),
-  width: z.number().int().nonnegative().nullable(),
-  height: z.number().int().nonnegative().nullable(),
+  bytes: z.coerce.number().int().nonnegative().nullable(),
+  width: z.coerce.number().int().nonnegative().nullable(),
+  height: z.coerce.number().int().nonnegative().nullable(),
   alt_text: z.string().nullable(),
-  sort_order: z.number().int().nonnegative(),
+  sort_order: z.coerce.number().int().nonnegative(),
   is_primary: z.boolean(),
   created_at: nullableString,
 });
 
 export const productSchema = z.object({
-  id: z.number().int().positive(),
-  vendor_id: z.number().int().positive(),
-  brand_id: z.number().int().positive().nullable(),
-  primary_category_id: z.number().int().positive(),
+  id: z.coerce.number().int().positive(),
+  vendor_id: z.coerce.number().int().positive(),
+  brand_id: z.coerce.number().int().positive().nullable(),
+  primary_category_id: z.coerce.number().int().positive(),
   name: z.string(),
   slug: z.string(),
   description: z.string(),

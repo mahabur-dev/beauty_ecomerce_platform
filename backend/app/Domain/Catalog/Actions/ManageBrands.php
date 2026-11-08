@@ -26,7 +26,7 @@ final readonly class ManageBrands
                 ipAddress: $ipAddress,
             );
 
-            return $brand;
+            return $brand->refresh();
         });
     }
 

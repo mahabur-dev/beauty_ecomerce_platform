@@ -46,7 +46,7 @@ export async function GroupedCatalog({
 
   return (
     <div className="space-y-12">
-      {catalog.data.map((group) => (
+      {catalog.data.map((group, groupIndex) => (
         <section
           key={group.subcategory.id}
           aria-labelledby={`group-${group.subcategory.id}`}
@@ -71,8 +71,12 @@ export async function GroupedCatalog({
             </a>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {group.products.slice(0, 5).map((product) => (
-              <CatalogProductCard key={product.id} product={product} />
+            {group.products.slice(0, 5).map((product, productIndex) => (
+              <CatalogProductCard
+                key={product.id}
+                product={product}
+                priority={groupIndex === 0 && productIndex < 4}
+              />
             ))}
           </div>
         </section>

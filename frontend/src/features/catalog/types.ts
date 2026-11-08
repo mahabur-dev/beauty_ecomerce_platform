@@ -6,7 +6,9 @@ export interface CatalogQuery {
   search?: string | undefined;
   category?: string | undefined;
   subcategory?: string | undefined;
+  subcategories?: string[] | undefined;
   brand?: string | undefined;
+  brands?: string[] | undefined;
   attributeValueIds?: number[] | undefined;
   minPrice?: string | undefined;
   maxPrice?: string | undefined;
@@ -53,6 +55,25 @@ export interface CatalogProduct {
   category: Pick<CatalogCategory, "name" | "slug"> | null;
   subcategory: Pick<CatalogCategory, "name" | "slug"> | null;
   primary_image: CatalogImage | null;
+}
+
+export interface CatalogProductVariant {
+  id: number;
+  sku: string;
+  title: string;
+  price: string;
+  compare_at_price: string | null;
+  is_default: boolean;
+  stock_quantity?: number;
+  attribute_values?: CatalogAttributeValue[];
+}
+
+export interface CatalogProductDetail extends CatalogProduct {
+  description: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  variants: CatalogProductVariant[];
+  images: CatalogImage[];
 }
 
 export interface CatalogAttributeValue {

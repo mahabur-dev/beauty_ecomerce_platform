@@ -421,6 +421,132 @@ export function Modal({
     </div>
   );
 }
+
+export interface DismissibleNoticeProps {
+  message?: string | null | undefined;
+  variant?: "success" | "error" | "warning" | "info";
+  durationMs?: number;
+  onDismiss?: () => void;
+  className?: string;
+  showProgress?: boolean;
+}
+
+export function DismissibleNotice({
+  message,
+  variant = "success",
+  durationMs = 4000,
+  onDismiss,
+  className = "",
+  showProgress = true,
+}: DismissibleNoticeProps) {
+  const [dismissedMessage, setDismissedMessage] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const remainingRef = useRef(durationMs);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startRef = useRef<number>(0);
+
+  const isVisible = Boolean(message && message !== dismissedMessage);
+
+  useEffect(() => {
+    if (!message || message === dismissedMessage || durationMs <= 0) {
+      return;
+    }
+
+    remainingRef.current = durationMs;
+    startRef.current = Date.now();
+
+    timerRef.current = setTimeout(() => {
+      setDismissedMessage(message);
+      onDismiss?.();
+    }, durationMs);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [message, dismissedMessage, durationMs, onDismiss]);
+
+  if (!isVisible || !message) {
+    return null;
+  }
+
+  const handleMouseEnter = () => {
+    if (durationMs <= 0) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      const elapsed = Date.now() - startRef.current;
+      remainingRef.current = Math.max(0, remainingRef.current - elapsed);
+      setIsPaused(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (durationMs <= 0) return;
+    if (isPaused && remainingRef.current > 0) {
+      startRef.current = Date.now();
+      setIsPaused(false);
+      timerRef.current = setTimeout(() => {
+        setDismissedMessage(message);
+        onDismiss?.();
+      }, remainingRef.current);
+    }
+  };
+
+  const handleDismiss = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setDismissedMessage(message);
+    onDismiss?.();
+  };
+
+  const isError = variant === "error";
+
+  return (
+    <div
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+      aria-atomic="true"
+      className={`catalog-notice catalog-notice-${variant} ${className}`.trim()}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="catalog-notice-body">
+        <span className="catalog-notice-icon" aria-hidden="true">
+          {variant === "success" && <Icon name="check" size={13} />}
+          {variant === "error" && <Icon name="cancel" size={13} />}
+          {variant === "warning" && <Icon name="warning" size={13} />}
+          {variant === "info" && <Icon name="sparkles" size={13} />}
+        </span>
+        <span className="catalog-notice-text">{message}</span>
+      </div>
+      <button
+        type="button"
+        onClick={handleDismiss}
+        aria-label="Dismiss notice"
+        className="catalog-notice-close"
+      >
+        ×
+      </button>
+      {showProgress && durationMs > 0 && (
+        <div
+          key={message}
+          className="catalog-notice-progress-bar"
+          style={{
+            animationDuration: `${durationMs}ms`,
+            animationPlayState: isPaused ? "paused" : "running",
+          }}
+          aria-hidden="true"
+        />
+      )}
+    </div>
+  );
+}
+
 export function ConfirmDelete({
   name,
   onConfirm,
@@ -440,25 +566,28 @@ export function ConfirmDelete({
       subtitle="This action cannot be undone."
       onClose={onCancel}
     >
-      <div className="catalog-confirm">
-        <span className="catalog-confirm-icon">!</span>
-        <p>
-          Are you sure you want to remove <strong>{name}</strong>? This action
-          cannot be undone.
-        </p>
-      </div>
-      {error && (
-        <p className="catalog-field-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="catalog-form-footer">
-        <ActionButton variant="secondary" onClick={onCancel} disabled={pending}>
-          Cancel
-        </ActionButton>
-        <ActionButton variant="danger" onClick={onConfirm} disabled={pending}>
-          {pending ? "Deleting…" : "Delete item"}
-        </ActionButton>
+      <div className="catalog-confirm-container">
+        <div className="catalog-confirm">
+          <span className="catalog-confirm-icon">!</span>
+          <p>
+            Are you sure you want to remove <strong>{name}</strong>? This action
+            cannot be undone.
+          </p>
+        </div>
+        {error && (
+          <DismissibleNotice
+            variant="error"
+            message={error}
+          />
+        )}
+        <div className="catalog-confirm-footer">
+          <ActionButton variant="secondary" onClick={onCancel} disabled={pending}>
+            Cancel
+          </ActionButton>
+          <ActionButton variant="danger" onClick={onConfirm} disabled={pending}>
+            {pending ? "Deleting…" : "Delete item"}
+          </ActionButton>
+        </div>
       </div>
     </Modal>
   );

@@ -5,6 +5,7 @@ import type {
   CatalogCategory,
   CatalogFacets,
   CatalogProduct,
+  CatalogProductDetail,
   CatalogQuery,
   GroupedCatalogResponse,
   ResourceResponse,
@@ -18,6 +19,15 @@ export function getProducts(
 ): Promise<PaginatedResponse<CatalogProduct>> {
   return apiRequest(
     `/products?${catalogQueryString(query)}`,
+    publicRequestOptions,
+  );
+}
+
+export function getProduct(
+  slug: string,
+): Promise<ResourceResponse<CatalogProductDetail>> {
+  return apiRequest(
+    `/products/${encodeURIComponent(slug)}`,
     publicRequestOptions,
   );
 }
