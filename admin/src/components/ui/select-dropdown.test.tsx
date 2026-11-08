@@ -109,4 +109,3 @@ describe("SelectDropdown reusable enterprise component", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });
-

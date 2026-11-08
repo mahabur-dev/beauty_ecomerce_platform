@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Icon } from "@/components/ui/icon";
 import { PermissionGate } from "@/features/auth/components/permission-gate";
 import {
   createCategory,
@@ -23,6 +24,7 @@ import {
   ActionButton,
   CategoryAvatar,
   ConfirmDelete,
+  DismissibleNotice,
   Field,
   IconAction,
   ListToolbar,
@@ -178,9 +180,10 @@ function CategoryForm({
           />
         </Field>
         {(validationError || requestError) && (
-          <div className="catalog-field-error" role="alert">
-            {validationError || requestError}
-          </div>
+          <DismissibleNotice
+            variant="error"
+            message={validationError || requestError}
+          />
         )}
         <div className="catalog-form-footer">
           <ActionButton
@@ -203,6 +206,115 @@ function CategoryForm({
   );
 }
 
+export function CategoryDetailModal({
+  category,
+  isParent,
+  onClose,
+  onEdit,
+}: {
+  category: Category;
+  isParent: boolean;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
+  return (
+    <Modal
+      title={isParent ? "Category details" : "Subcategory details"}
+      subtitle={`Detailed overview for ${category.name}`}
+      onClose={onClose}
+    >
+      <div className="catalog-detail-container">
+        <div className="catalog-detail-header">
+          <div className="catalog-detail-avatar">
+            <span>{categoryGlyph(category)}</span>
+          </div>
+          <h3 className="catalog-detail-title">{category.name}</h3>
+          <div className="catalog-detail-header-meta-row">
+            <StatusBadge value={category.status} />
+            <span className="catalog-slug">/{category.slug}</span>
+          </div>
+        </div>
+
+        <div className="catalog-detail-meta">
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Classification</span>
+            <span className="catalog-detail-value">
+              {isParent ? "Primary Category" : "Subcategory"}
+            </span>
+          </div>
+
+          {!isParent && (
+            <div className="catalog-detail-row">
+              <span className="catalog-detail-label">Parent category</span>
+              <span className="catalog-detail-value">
+                {category.parent?.name ?? "None"}
+              </span>
+            </div>
+          )}
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">
+              {isParent ? "Subcategories" : "Products represented"}
+            </span>
+            <span className="catalog-detail-value">
+              {isParent
+                ? `${category.children_count ?? category.children?.length ?? 0} collections`
+                : `${category.products_count ?? 0} products`}
+            </span>
+          </div>
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Sort order</span>
+            <span className="catalog-detail-value">{category.sort_order}</span>
+          </div>
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Record ID</span>
+            <span className="catalog-detail-value">
+              <code className="catalog-detail-code">#{category.id}</code>
+            </span>
+          </div>
+
+          {category.created_at && (
+            <div className="catalog-detail-row">
+              <span className="catalog-detail-label">Created date</span>
+              <span className="catalog-detail-value">
+                {new Date(category.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="catalog-detail-section">
+          <span className="catalog-detail-section-title">Description</span>
+          {category.description ? (
+            <p className="catalog-detail-desc">{category.description}</p>
+          ) : (
+            <p className="catalog-detail-desc-empty">
+              No description provided for this collection.
+            </p>
+          )}
+        </div>
+
+        <div className="catalog-detail-footer">
+          <ActionButton variant="secondary" onClick={onClose}>
+            Close
+          </ActionButton>
+          {onEdit && (
+            <ActionButton variant="primary" onClick={onEdit}>
+              Edit {isParent ? "category" : "subcategory"}
+            </ActionButton>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function CategoryManagement({
   mode,
 }: {
@@ -214,6 +326,7 @@ export function CategoryManagement({
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Category | null | "new">(null);
+  const [viewing, setViewing] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const [notice, setNotice] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -331,21 +444,17 @@ export function CategoryManagement({
           />
         </div>
         {notice && (
-          <div className="catalog-inline-notice" role="status">
-            {notice}
-            <button
-              type="button"
-              onClick={() => setNotice("")}
-              aria-label="Dismiss notice"
-            >
-              ×
-            </button>
-          </div>
+          <DismissibleNotice
+            variant="success"
+            message={notice}
+            onDismiss={() => setNotice("")}
+          />
         )}
         {pageError && (
-          <div className="catalog-field-error" role="alert">
-            {catalogErrorMessage(pageError)}
-          </div>
+          <DismissibleNotice
+            variant="error"
+            message={catalogErrorMessage(pageError)}
+          />
         )}
         <Panel
           title={`${isParent ? "Category" : "Subcategory"} directory`}
@@ -410,6 +519,12 @@ export function CategoryManagement({
                     <td>
                       <div className="catalog-actions">
                         <IconAction
+                          label={`View details for ${item.name}`}
+                          onClick={() => setViewing(item)}
+                        >
+                          <Icon name="eye" size={15} />
+                        </IconAction>
+                        <IconAction
                           label={`Edit ${item.name}`}
                           onClick={() => setEditing(item)}
                         >
@@ -437,6 +552,18 @@ export function CategoryManagement({
           />
         </Panel>
       </div>
+      {viewing && (
+        <CategoryDetailModal
+          category={viewing}
+          isParent={isParent}
+          onClose={() => setViewing(null)}
+          onEdit={() => {
+            const target = viewing;
+            setViewing(null);
+            setEditing(target);
+          }}
+        />
+      )}
       {editing && (
         <CategoryForm
           key={editing === "new" ? "new" : editing.id}

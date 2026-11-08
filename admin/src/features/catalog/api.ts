@@ -63,7 +63,12 @@ async function contract<T>(
 ): Promise<T> {
   const response = await request;
   const parsed = schema.safeParse(response);
-  if (!parsed.success) throw new ApiContractError(parsed.error);
+  if (!parsed.success) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("API Contract schema validation failed:", parsed.error.issues, response);
+    }
+    throw new ApiContractError(parsed.error);
+  }
   return parsed.data;
 }
 
@@ -207,13 +212,39 @@ export async function uploadProductImage(
   productId: number,
   image: File,
   name: string,
+  isPrimary: boolean = false,
+  sortOrder: number = 0,
 ) {
   const body = new FormData();
   body.set("image", image);
   body.set("alt_text", name);
-  body.set("is_primary", "1");
+  if (isPrimary) {
+    body.set("is_primary", "1");
+  }
+  body.set("sort_order", String(sortOrder));
   const response = await contract(
     apiRequest(`/admin/products/${productId}/images`, { method: "POST", body }),
+    productImageResponseSchema,
+  );
+  return response.data;
+}
+
+export function deleteProductImage(productId: number, imageId: number) {
+  return apiRequest<void>(`/admin/products/${productId}/images/${imageId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateProductImage(
+  productId: number,
+  imageId: number,
+  input: { is_primary?: boolean; alt_text?: string; sort_order?: number },
+) {
+  const response = await contract(
+    apiRequest(`/admin/products/${productId}/images/${imageId}`, {
+      method: "PATCH",
+      json: input,
+    }),
     productImageResponseSchema,
   );
   return response.data;

@@ -41,6 +41,11 @@ final readonly class ManageProductImages
             return DB::transaction(function () use ($actor, $product, $metadata, $asset, $ipAddress): ProductImage {
                 $product = Product::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
                 $images = $product->images()->lockForUpdate()->get();
+
+                if ($images->count() >= 5) {
+                    throw new CatalogRuleException('A product cannot have more than 5 images.');
+                }
+
                 $variantId = $metadata['product_variant_id'] ?? null;
                 $this->assertVariant($product, $variantId);
                 $isPrimary = (bool) ($metadata['is_primary'] ?? false) || $images->isEmpty();
@@ -62,7 +67,7 @@ final readonly class ManageProductImages
                     'width' => $asset->width,
                     'height' => $asset->height,
                     'alt_text' => $metadata['alt_text'] ?? null,
-                    'sort_order' => $metadata['sort_order'] ?? 0,
+                    'sort_order' => isset($metadata['sort_order']) ? (int) $metadata['sort_order'] : 0,
                     'is_primary' => $isPrimary,
                 ]);
                 $product->images()->save($image);
@@ -75,7 +80,7 @@ final readonly class ManageProductImages
                     ipAddress: $ipAddress,
                 );
 
-                return $image->load('variant');
+                return $image->refresh()->load('variant');
             });
         } catch (Throwable $exception) {
             try {

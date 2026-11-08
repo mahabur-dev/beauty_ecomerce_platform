@@ -42,4 +42,20 @@ describe("catalog query utilities", () => {
       "/products?brand=aurora&page=3",
     );
   });
+
+  it("supports multiple subcategories and brands parsing and serialization", () => {
+    const query = parseCatalogQuery({
+      subcategories: "eyeliner,lipstick",
+      brands: ["botanica-lab", "glowcare"],
+    });
+
+    expect(query.subcategories).toEqual(["eyeliner", "lipstick"]);
+    expect(query.subcategory).toBe("eyeliner");
+    expect(query.brands).toEqual(["botanica-lab", "glowcare"]);
+    expect(query.brand).toBe("botanica-lab");
+
+    const serialized = catalogQueryString(query);
+    expect(serialized).toContain("subcategories=eyeliner%2Clipstick");
+    expect(serialized).toContain("brands=botanica-lab%2Cglowcare");
+  });
 });

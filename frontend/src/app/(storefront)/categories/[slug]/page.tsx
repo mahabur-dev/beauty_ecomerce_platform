@@ -1,7 +1,10 @@
+import { FolderSearch, Sparkles } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 
-import { ErrorState } from "@/components/feedback";
-import { Container, Skeleton } from "@/components/ui";
+import { EmptyState } from "@/components/feedback";
+import { buttonStyles, Container, Skeleton } from "@/components/ui";
 import {
   CatalogPageHeader,
   CatalogSkeleton,
@@ -29,10 +32,36 @@ async function CategoryContent({ params, searchParams }: CategoryPageProps) {
 
   if (!response) {
     return (
-      <Container className="py-14">
-        <ErrorState
-          title="Category not available"
-          description="This category may not exist, may be inactive, or the catalog service is currently unreachable."
+      <Container className="py-14 sm:py-20">
+        <EmptyState
+          icon={FolderSearch}
+          title="Category currently unavailable"
+          description="We couldn't find the category you're looking for. It may have been moved, updated, or is temporarily unavailable. Discover our full selection of beauty and skincare collections below."
+          action={
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/products"
+                className={buttonStyles({
+                  variant: "primary",
+                  size: "lg",
+                  className: "rounded-xl font-bold shadow-md",
+                })}
+              >
+                <Sparkles className="size-4" />
+                Browse All Products
+              </Link>
+              <Link
+                href={"/categories" as Route}
+                className={buttonStyles({
+                  variant: "outline",
+                  size: "lg",
+                  className: "rounded-xl font-bold",
+                })}
+              >
+                View All Categories
+              </Link>
+            </div>
+          }
         />
       </Container>
     );

@@ -1,4 +1,6 @@
-import { SearchX } from "lucide-react";
+import { PackageOpen, SearchX, Sparkles } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 
 import { EmptyState, ErrorState } from "@/components/feedback";
 import { buttonStyles } from "@/components/ui";
@@ -39,6 +41,17 @@ export async function ProductCatalog({
 
   const [products, categories, facets] = result;
 
+  const hasActiveFilters = Boolean(
+    query.search ||
+    query.minPrice ||
+    query.maxPrice ||
+    (!fixed.brand && (query.brand || (query.brands && query.brands.length > 0))) ||
+    (!fixed.category && query.category) ||
+    query.subcategory ||
+    (query.subcategories && query.subcategories.length > 0) ||
+    (query.attributeValueIds && query.attributeValueIds.length > 0),
+  );
+
   return (
     <div className="grid gap-8 lg:grid-cols-[17rem_minmax(0,1fr)]">
       <CatalogFilters
@@ -71,8 +84,12 @@ export async function ProductCatalog({
         {products.data.length > 0 ? (
           <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-              {products.data.map((product) => (
-                <CatalogProductCard key={product.id} product={product} />
+              {products.data.map((product, index) => (
+                <CatalogProductCard
+                  key={product.id}
+                  product={product}
+                  priority={index < 4}
+                />
               ))}
             </div>
             <CatalogPagination
@@ -81,18 +98,60 @@ export async function ProductCatalog({
               query={query}
             />
           </>
-        ) : (
+        ) : hasActiveFilters ? (
           <EmptyState
             icon={SearchX}
             title="No products match these filters"
-            description="Try removing a filter, changing the price range, or searching with a broader term."
+            description="We couldn't find any products matching your current filter criteria. Try clearing or relaxing some filters."
             action={
-              <a
-                href={pathname}
-                className={buttonStyles({ variant: "outline" })}
+              <Link
+                href={pathname as Route}
+                className={buttonStyles({
+                  variant: "outline",
+                  className: "rounded-xl font-bold",
+                })}
               >
                 Clear filters
-              </a>
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={PackageOpen}
+            title={
+              fixed.category
+                ? "No products in this category yet"
+                : fixed.brand
+                  ? "No products for this brand yet"
+                  : "No products currently available"
+            }
+            description={
+              fixed.category
+                ? "We are actively curating new beauty and wellness items for this collection. Please check back soon or browse our other categories."
+                : "We are updating our catalog with fresh arrivals. Explore our trending products in the meantime."
+            }
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/products"
+                  className={buttonStyles({
+                    variant: "primary",
+                    className: "rounded-xl font-bold shadow-md",
+                  })}
+                >
+                  <Sparkles className="size-4" />
+                  Explore All Products
+                </Link>
+                <Link
+                  href={"/categories" as Route}
+                  className={buttonStyles({
+                    variant: "outline",
+                    className: "rounded-xl font-bold",
+                  })}
+                >
+                  Browse Other Categories
+                </Link>
+              </div>
             }
           />
         )}

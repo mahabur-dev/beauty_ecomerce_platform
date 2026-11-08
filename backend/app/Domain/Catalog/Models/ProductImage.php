@@ -30,13 +30,21 @@ final class ProductImage extends Model
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
+    public function getUrlAttribute(): string
+    {
+        return (string) ($this->secure_url ?? '');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
+            'product_id' => 'integer',
+            'product_variant_id' => 'integer',
             'bytes' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
+            'sort_order' => 'integer',
             'is_primary' => 'boolean',
         ];
     }

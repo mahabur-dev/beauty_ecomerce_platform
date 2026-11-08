@@ -116,7 +116,6 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/users/{user}/administrative-role', [AdminUserController::class, 'setRole']);
                 Route::delete('/users/{user}/mfa', [AdminUserController::class, 'resetMfa']);
 
-                Route::get('/check', [CheckController::class, 'check']);
             });
 
             Route::middleware(['role:super_admin', 'throttle:catalog-write'])->group(function (): void {

@@ -11,6 +11,7 @@ use App\Domain\Identity\Models\User;
 use App\Domain\Shared\Enums\RecordStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use stdClass;
 
 final class AdminCatalogOverview
 {
@@ -105,7 +106,7 @@ final class AdminCatalogOverview
     }
 
     /**
-     * @param  Collection<int, object{entity_type: string, status: string, aggregate: int|string}>  $counts
+     * @param  Collection<int, stdClass>  $counts
      * @return array<string, int>
      */
     private function categoryStatusCounts(Collection $counts, string $entityType): array

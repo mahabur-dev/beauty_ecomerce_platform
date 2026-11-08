@@ -167,7 +167,7 @@ final readonly class ManageCategories
             ipAddress: $ipAddress,
         );
 
-        return $category;
+        return $category->refresh();
     }
 
     /** @param array<string, mixed> $attributes */

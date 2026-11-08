@@ -13,14 +13,14 @@ final class BrandResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->getKey(),
-            'name' => $this->name,
-            'slug' => $this->slug,
+            'id' => (int) $this->getKey(),
+            'name' => (string) $this->name,
+            'slug' => (string) $this->slug,
             'status' => (string) $this->getRawOriginal('status'),
             'products_count' => $this->whenCounted('products'),
-            'deleted_at' => $this->deleted_at,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }

@@ -4,3 +4,7 @@ export * from "./catalog-product-card";
 export * from "./catalog-skeleton";
 export * from "./grouped-catalog";
 export * from "./product-catalog";
+export * from "./product-detail-view";
+export * from "./product-gallery";
+export * from "./product-purchase-box";
+export * from "./product-reviews";

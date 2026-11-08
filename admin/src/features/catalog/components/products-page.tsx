@@ -8,9 +8,11 @@ import { PermissionGate } from "@/features/auth/components/permission-gate";
 import {
   createProduct,
   deleteProduct,
+  deleteProductImage,
   setProductStatus,
   slugify,
   updateProduct,
+  updateProductImage,
   updateProductVariant,
   uploadProductImage,
   type ProductInput,
@@ -27,6 +29,7 @@ import {
 import {
   ActionButton,
   ConfirmDelete,
+  DismissibleNotice,
   Field,
   IconAction,
   ListToolbar,
@@ -53,10 +56,22 @@ const currency = (value: number | null) =>
     ? "—"
     : new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: "USD",
+        currency: "BDT",
+        currencyDisplay: "narrowSymbol",
       }).format(value);
 
-type ProductSubmission = { input: ProductInput; image: File | null };
+type ProductSubmission = {
+  input: ProductInput;
+  newImages: File[];
+  deleteImageIds?: number[] | undefined;
+  primaryChoice?: {
+    type: "existing" | "new";
+    id?: number | undefined;
+    newIndex?: number | undefined;
+  } | undefined;
+};
+
+type NewImageItem = { id: string; file: File; previewUrl: string };
 
 function ProductForm({
   current,
@@ -101,31 +116,122 @@ function ProductForm({
   const [status, setStatus] = useState<ProductStatus>(
     current?.status ?? "draft",
   );
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Gallery state (up to 5 images max)
+  const maxImages = 5;
+  const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
+  const [newImages, setNewImages] = useState<NewImageItem[]>([]);
   const [validationError, setValidationError] = useState("");
+
+  const remainingExisting = (current?.images ?? []).filter(
+    (image) => !removedImageIds.includes(image.id),
+  );
+  const totalImageCount = remainingExisting.length + newImages.length;
+
+  const [primaryKey, setPrimaryKey] = useState<string>(() => {
+    const existingPrimary = current?.images?.find((img) => img.is_primary);
+    if (existingPrimary) return `existing:${existingPrimary.id}`;
+    const firstImg = current?.images?.[0];
+    if (firstImg) {
+      return `existing:${firstImg.id}`;
+    }
+    return "";
+  });
+
   const subcategories = allSubcategories.filter(
     (item) => item.parent_id === Number(categoryId),
   );
-  const existingImage =
-    current?.images?.find((image) => image.is_primary)?.url ?? null;
 
   useEffect(() => {
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      newImages.forEach((item) => URL.revokeObjectURL(item.previewUrl));
     };
-  }, [imagePreview]);
+  }, [newImages]);
 
-  function handleImage(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) return;
-    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-      setValidationError("Choose a JPG, PNG, WEBP or AVIF image under 5 MB.");
+  function handleImageFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const availableSlots = maxImages - totalImageCount;
+    if (availableSlots <= 0) {
+      setValidationError(
+        "You have already reached the maximum limit of 5 images.",
+      );
+      event.target.value = "";
       return;
     }
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+
+    const selectedList = Array.from(files);
+    const validFiles: NewImageItem[] = [];
+
+    for (const file of selectedList) {
+      if (validFiles.length >= availableSlots) break;
+      if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+        setValidationError("Choose JPG, PNG, WEBP or AVIF images under 5 MB.");
+        continue;
+      }
+      validFiles.push({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+
+    if (selectedList.length > availableSlots) {
+      setValidationError(
+        `Only ${availableSlots} more image(s) could be added. Maximum is 5 images.`,
+      );
+    } else {
+      setValidationError("");
+    }
+
+    if (validFiles.length > 0) {
+      setNewImages((prev) => [...prev, ...validFiles]);
+      // If no primary image is currently active, designate the first newly added image
+      const firstValid = validFiles[0];
+      if (!primaryKey && remainingExisting.length === 0 && firstValid) {
+        setPrimaryKey(`new:${firstValid.id}`);
+      }
+    }
+
+    event.target.value = "";
+  }
+
+  function removeNewImage(id: string) {
+    setNewImages((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      const remaining = prev.filter((item) => item.id !== id);
+
+      if (primaryKey === `new:${id}`) {
+        const firstExisting = remainingExisting[0];
+        const firstRemainingNew = remaining[0];
+        if (firstExisting) {
+          setPrimaryKey(`existing:${firstExisting.id}`);
+        } else if (firstRemainingNew) {
+          setPrimaryKey(`new:${firstRemainingNew.id}`);
+        } else {
+          setPrimaryKey("");
+        }
+      }
+      return remaining;
+    });
+    setValidationError("");
+  }
+
+  function removeExistingImage(id: number) {
+    setRemovedImageIds((prev) => [...prev, id]);
+    if (primaryKey === `existing:${id}`) {
+      const nextExisting = remainingExisting.find((img) => img.id !== id);
+      const firstNew = newImages[0];
+      if (nextExisting) {
+        setPrimaryKey(`existing:${nextExisting.id}`);
+      } else if (firstNew) {
+        setPrimaryKey(`new:${firstNew.id}`);
+      } else {
+        setPrimaryKey("");
+      }
+    }
     setValidationError("");
   }
 
@@ -160,13 +266,38 @@ function ProductForm({
       );
       return;
     }
-    if (!current && status === "active" && !imageFile) {
+    if (!current && status === "active" && totalImageCount === 0) {
       setValidationError(
-        "Upload a primary image before creating an active product.",
+        "Upload at least one image before creating an active product.",
       );
       return;
     }
+    if (totalImageCount > maxImages) {
+      setValidationError("A product can have a maximum of 5 images.");
+      return;
+    }
     setValidationError("");
+
+    let primaryChoice: ProductSubmission["primaryChoice"] = undefined;
+    if (primaryKey.startsWith("existing:")) {
+      const existingId = Number(primaryKey.replace("existing:", ""));
+      primaryChoice = { type: "existing", id: existingId };
+    } else if (primaryKey.startsWith("new:")) {
+      const newId = primaryKey.replace("new:", "");
+      const index = newImages.findIndex((item) => item.id === newId);
+      primaryChoice = {
+        type: "new",
+        newIndex: index >= 0 ? index : 0,
+      };
+    } else {
+      const firstRemaining = remainingExisting[0];
+      if (firstRemaining) {
+        primaryChoice = { type: "existing", id: firstRemaining.id };
+      } else if (newImages.length > 0) {
+        primaryChoice = { type: "new", newIndex: 0 };
+      }
+    }
+
     onSave({
       input: {
         category_id: Number(categoryId),
@@ -181,7 +312,9 @@ function ProductForm({
         price: amount,
         compare_at_price: previous,
       },
-      image: imageFile,
+      newImages: newImages.map((item) => item.file),
+      deleteImageIds: removedImageIds,
+      ...(primaryChoice ? { primaryChoice } : {}),
     });
   }
 
@@ -324,7 +457,7 @@ function ProductForm({
             </div>
           </div>
           <div className="catalog-form-grid catalog-form-grid-three">
-            <Field label="Current price ($)" required>
+            <Field label="Current price (৳)" required>
               <input
                 type="number"
                 min="0"
@@ -335,7 +468,7 @@ function ProductForm({
                 onChange={(event) => setPrice(event.target.value)}
               />
             </Field>
-            <Field label="Compare at price ($)">
+            <Field label="Compare at price (৳)">
               <input
                 type="number"
                 min="0"
@@ -365,45 +498,144 @@ function ProductForm({
           <div className="catalog-form-section-header">
             <span>03</span>
             <div>
-              <h3>Primary image</h3>
+              <h3>
+                Product gallery ({totalImageCount} of {maxImages})
+              </h3>
               <p>
-                Real image uploads are stored through the catalog media API.
+                Upload up to 5 images for your storefront product gallery. Click any thumbnail to designate it as the Primary image.
               </p>
             </div>
           </div>
-          <div className="catalog-image-editor">
-            <div className="catalog-image-preview">
-              {imagePreview || existingImage ? (
-                <Image
-                  unoptimized
-                  width={125}
-                  height={125}
-                  src={imagePreview ?? existingImage!}
-                  alt="Product image preview"
-                />
-              ) : (
-                <Icon name="package" size={34} />
+          <div className="catalog-gallery-uploader">
+            <div className="catalog-gallery-grid">
+              {/* Existing images */}
+              {remainingExisting.map((img, idx) => {
+                const isSelectedPrimary = primaryKey === `existing:${img.id}`;
+                return (
+                  <div
+                    key={img.id}
+                    className={`catalog-gallery-tile ${isSelectedPrimary ? "catalog-gallery-tile-primary" : ""}`}
+                    onClick={() => setPrimaryKey(`existing:${img.id}`)}
+                    title={isSelectedPrimary ? "Primary storefront image" : "Click to set as primary"}
+                  >
+                    <Image
+                      unoptimized
+                      width={90}
+                      height={90}
+                      src={img.url}
+                      alt={img.alt_text || `Product image ${idx + 1}`}
+                    />
+                    {isSelectedPrimary ? (
+                      <span className="catalog-gallery-badge-primary">★ Primary</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="catalog-gallery-set-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrimaryKey(`existing:${img.id}`);
+                        }}
+                      >
+                        Set primary
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="catalog-gallery-remove"
+                      title="Remove image"
+                      aria-label={`Remove image ${idx + 1}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeExistingImage(img.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+
+              {/* Newly added images */}
+              {newImages.map((img, idx) => {
+                const isSelectedPrimary = primaryKey === `new:${img.id}`;
+                return (
+                  <div
+                    key={img.id}
+                    className={`catalog-gallery-tile ${isSelectedPrimary ? "catalog-gallery-tile-primary" : ""}`}
+                    onClick={() => setPrimaryKey(`new:${img.id}`)}
+                    title={isSelectedPrimary ? "Primary storefront image" : "Click to set as primary"}
+                  >
+                    <Image
+                      unoptimized
+                      width={90}
+                      height={90}
+                      src={img.previewUrl}
+                      alt={`New upload preview ${idx + 1}`}
+                    />
+                    {isSelectedPrimary ? (
+                      <span className="catalog-gallery-badge-primary">★ Primary</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="catalog-gallery-set-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrimaryKey(`new:${img.id}`);
+                        }}
+                      >
+                        Set primary
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="catalog-gallery-remove"
+                      title="Remove image"
+                      aria-label={`Remove new image ${idx + 1}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeNewImage(img.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+
+              {/* Upload Tile if below max 5 */}
+              {totalImageCount < maxImages && (
+                <label
+                  className="catalog-gallery-add-button"
+                  title="Upload images"
+                >
+                  <Icon name="package" size={20} />
+                  <span>+ Add image</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleImageFiles}
+                    className="sr-only"
+                  />
+                </label>
               )}
             </div>
-            <div className="catalog-image-controls">
-              <label className="catalog-upload-control">
-                <Icon name="package" size={17} /> Choose image
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
-                  onChange={handleImage}
-                  className="sr-only"
-                />
-              </label>
-              <small>JPG, PNG, WEBP or AVIF · Max 5 MB</small>
-              {imageFile && <small>Selected: {imageFile.name}</small>}
+
+            <div className="catalog-gallery-counter">
+              <span>
+                {totalImageCount === 0
+                  ? "No images selected yet (max 5)."
+                  : `${totalImageCount} of ${maxImages} images selected.`}{" "}
+                Supports JPG, PNG, WEBP, AVIF (Max 5 MB each).
+              </span>
             </div>
           </div>
         </div>
         {(validationError || requestError || metadataError) && (
-          <p className="catalog-field-error" role="alert">
-            {validationError || requestError || metadataError}
-          </p>
+          <DismissibleNotice
+            variant="error"
+            message={validationError || requestError || metadataError}
+          />
         )}
         <div className="catalog-form-footer">
           <ActionButton
@@ -429,6 +661,165 @@ function ProductForm({
   );
 }
 
+export function ProductDetailModal({
+  product,
+  onClose,
+  onEdit,
+}: {
+  product: Product;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
+  const primaryImage =
+    product.images?.find((image) => image.is_primary) ?? product.images?.[0];
+  const defaultVariant = product.variants?.find(
+    (variant) => variant.is_default,
+  );
+
+  return (
+    <Modal
+      title="Product details"
+      subtitle={`Detailed overview for ${product.name}`}
+      onClose={onClose}
+    >
+      <div className="catalog-detail-container">
+        <div className="catalog-detail-header">
+          <div className="catalog-detail-avatar-product">
+            {primaryImage ? (
+              <Image
+                unoptimized
+                width={56}
+                height={56}
+                src={primaryImage.url}
+                alt={product.name}
+              />
+            ) : (
+              <Icon name="package" size={26} />
+            )}
+          </div>
+          <h3 className="catalog-detail-title">{product.name}</h3>
+          <div className="catalog-detail-header-meta-row">
+            <StatusBadge value={product.status} />
+            <span className="catalog-slug">/{product.slug}</span>
+            {defaultVariant?.sku && (
+              <span className="catalog-slug">SKU: {defaultVariant.sku}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="catalog-detail-meta">
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Category</span>
+            <span className="catalog-detail-value">
+              {product.subcategory?.parent?.name ?? "—"}
+            </span>
+          </div>
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Subcategory</span>
+            <span className="catalog-detail-value">
+              {product.subcategory?.name ?? "—"}
+            </span>
+          </div>
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Brand</span>
+            <span className="catalog-detail-value">
+              {product.brand?.name ?? "—"}
+            </span>
+          </div>
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Price (New)</span>
+            <span className="catalog-detail-value">
+              <strong>{currency(product.new_price)}</strong>
+            </span>
+          </div>
+
+          {product.old_price !== null && (
+            <div className="catalog-detail-row">
+              <span className="catalog-detail-label">Original price (Old)</span>
+              <span className="catalog-detail-value">
+                <del>{currency(product.old_price)}</del>
+              </span>
+            </div>
+          )}
+
+          <div className="catalog-detail-row">
+            <span className="catalog-detail-label">Record ID</span>
+            <span className="catalog-detail-value">
+              <code className="catalog-detail-code">#{product.id}</code>
+            </span>
+          </div>
+
+          {product.created_at && (
+            <div className="catalog-detail-row">
+              <span className="catalog-detail-label">Created date</span>
+              <span className="catalog-detail-value">
+                {new Date(product.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Gallery thumbnails */}
+        {product.images && product.images.length > 0 && (
+          <div className="catalog-detail-gallery">
+            <span className="catalog-detail-section-title">
+              Product gallery ({product.images.length} of 5 images)
+            </span>
+            <div className="catalog-gallery-grid">
+              {product.images.map((img, idx) => (
+                <div
+                  key={img.id}
+                  className={`catalog-gallery-item ${img.is_primary ? "catalog-gallery-item-primary" : ""}`}
+                >
+                  <Image
+                    unoptimized
+                    width={58}
+                    height={58}
+                    src={img.url}
+                    alt={img.alt_text || `Product image ${idx + 1}`}
+                  />
+                  {img.is_primary && (
+                    <span className="catalog-gallery-primary-tag">Primary</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="catalog-detail-section">
+          <span className="catalog-detail-section-title">Description</span>
+          {product.description ? (
+            <p className="catalog-detail-desc">{product.description}</p>
+          ) : (
+            <p className="catalog-detail-desc-empty">
+              No description provided for this product.
+            </p>
+          )}
+        </div>
+
+        <div className="catalog-detail-footer">
+          <ActionButton variant="secondary" onClick={onClose}>
+            Close
+          </ActionButton>
+          {onEdit && (
+            <ActionButton variant="primary" onClick={onEdit}>
+              Edit product
+            </ActionButton>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ProductsPage() {
   const queryClient = useQueryClient();
   const optionsQuery = useCatalogOptions();
@@ -439,6 +830,7 @@ export function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const [viewing, setViewing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [notice, setNotice] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -456,16 +848,67 @@ export function ProductsPage() {
     productsQuery.error ?? summaryQuery.error ?? optionsQuery.error;
 
   const saveMutation = useMutation({
-    mutationFn: async ({ input, image }: ProductSubmission) => {
+    mutationFn: async ({
+      input,
+      newImages,
+      deleteImageIds,
+      primaryChoice,
+    }: ProductSubmission) => {
       if (editing === "new") {
         const created = await createProduct(input);
-        if (image) await uploadProductImage(created.id, image, input.name);
+        const primaryNewIndex =
+          primaryChoice?.type === "new" ? (primaryChoice.newIndex ?? 0) : 0;
+        for (let i = 0; i < newImages.length; i++) {
+          const file = newImages[i];
+          if (!file) continue;
+          await uploadProductImage(
+            created.id,
+            file,
+            `${input.name} - ${i + 1}`,
+            i === primaryNewIndex,
+            i,
+          );
+        }
         return input.status === "draft"
           ? created
           : setProductStatus(created.id, input.status);
       }
       if (!editing) throw new Error("No product selected.");
-      if (image) await uploadProductImage(editing.id, image, input.name);
+
+      // Delete removed images
+      if (deleteImageIds && deleteImageIds.length > 0) {
+        for (const imgId of deleteImageIds) {
+          await deleteProductImage(editing.id, imgId);
+        }
+      }
+
+      const remainingExisting = (editing.images ?? []).filter(
+        (img) => !deleteImageIds?.includes(img.id),
+      );
+
+      // Upload new images
+      const primaryNewIndex =
+        primaryChoice?.type === "new" ? (primaryChoice.newIndex ?? -1) : -1;
+      for (let i = 0; i < newImages.length; i++) {
+        const file = newImages[i];
+        if (!file) continue;
+        const isThisPrimary = i === primaryNewIndex;
+        await uploadProductImage(
+          editing.id,
+          file,
+          `${input.name} - ${remainingExisting.length + i + 1}`,
+          isThisPrimary,
+          remainingExisting.length + i,
+        );
+      }
+
+      // If an existing image was chosen as primary, ensure it is set as primary
+      if (primaryChoice?.type === "existing" && primaryChoice.id) {
+        await updateProductImage(editing.id, primaryChoice.id, {
+          is_primary: true,
+        });
+      }
+
       const defaultVariant = editing.variants?.find(
         (variant) => variant.is_default,
       );
@@ -541,21 +984,17 @@ export function ProductsPage() {
           />
         </div>
         {notice && (
-          <div role="status" className="catalog-inline-notice">
-            {notice}
-            <button
-              type="button"
-              onClick={() => setNotice("")}
-              aria-label="Dismiss notice"
-            >
-              ×
-            </button>
-          </div>
+          <DismissibleNotice
+            variant="success"
+            message={notice}
+            onDismiss={() => setNotice("")}
+          />
         )}
         {pageError && (
-          <div className="catalog-field-error" role="alert">
-            {catalogErrorMessage(pageError)}
-          </div>
+          <DismissibleNotice
+            variant="error"
+            message={catalogErrorMessage(pageError)}
+          />
         )}
         <Panel
           title="Product catalog"
@@ -661,6 +1100,12 @@ export function ProductsPage() {
                       <td>
                         <div className="catalog-actions">
                           <IconAction
+                            label={`View details for ${item.name}`}
+                            onClick={() => setViewing(item)}
+                          >
+                            <Icon name="eye" size={15} />
+                          </IconAction>
+                          <IconAction
                             label={`Edit ${item.name}`}
                             onClick={() => setEditing(item)}
                           >
@@ -689,6 +1134,17 @@ export function ProductsPage() {
           />
         </Panel>
       </div>
+      {viewing && (
+        <ProductDetailModal
+          product={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={() => {
+            const target = viewing;
+            setViewing(null);
+            setEditing(target);
+          }}
+        />
+      )}
       {editing && (
         <ProductForm
           key={editing === "new" ? "new" : editing.id}

@@ -13,20 +13,20 @@ final class CategoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->getKey(),
-            'parent_id' => $this->parent_id,
-            'name' => $this->name,
-            'slug' => $this->slug,
+            'id' => (int) $this->getKey(),
+            'parent_id' => $this->parent_id !== null ? (int) $this->parent_id : null,
+            'name' => (string) $this->name,
+            'slug' => (string) $this->slug,
             'description' => $this->description,
             'status' => (string) $this->getRawOriginal('status'),
-            'sort_order' => $this->sort_order,
+            'sort_order' => (int) ($this->sort_order ?? 0),
             'children_count' => $this->whenCounted('children'),
             'products_count' => $this->whenCounted('products'),
             'parent' => new self($this->whenLoaded('parent')),
             'children' => self::collection($this->whenLoaded('children')),
-            'deleted_at' => $this->deleted_at,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }

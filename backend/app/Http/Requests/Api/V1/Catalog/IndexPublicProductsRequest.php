@@ -20,6 +20,10 @@ final class IndexPublicProductsRequest extends FormRequest
             'category' => ['nullable', 'string', 'max:180'],
             'subcategory' => ['nullable', 'string', 'max:180'],
             'brand' => ['nullable', 'string', 'max:180'],
+            'subcategories' => ['nullable', 'array', 'max:50'],
+            'subcategories.*' => ['string', 'max:180'],
+            'brands' => ['nullable', 'array', 'max:50'],
+            'brands.*' => ['string', 'max:180'],
             'attribute_value_ids' => ['nullable', 'array', 'max:50'],
             'attribute_value_ids.*' => ['integer', 'distinct', 'exists:attribute_values,id'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
@@ -34,6 +38,30 @@ final class IndexPublicProductsRequest extends FormRequest
         if (is_string($this->input('attribute_value_ids'))) {
             $this->merge(['attribute_value_ids' => array_values(array_filter(
                 explode(',', (string) $this->input('attribute_value_ids')),
+                fn (string $value): bool => $value !== '',
+            ))]);
+        }
+
+        if (is_string($this->input('subcategories'))) {
+            $this->merge(['subcategories' => array_values(array_filter(
+                explode(',', (string) $this->input('subcategories')),
+                fn (string $value): bool => $value !== '',
+            ))]);
+        } elseif (is_string($this->input('subcategory')) && str_contains((string) $this->input('subcategory'), ',')) {
+            $this->merge(['subcategories' => array_values(array_filter(
+                explode(',', (string) $this->input('subcategory')),
+                fn (string $value): bool => $value !== '',
+            ))]);
+        }
+
+        if (is_string($this->input('brands'))) {
+            $this->merge(['brands' => array_values(array_filter(
+                explode(',', (string) $this->input('brands')),
+                fn (string $value): bool => $value !== '',
+            ))]);
+        } elseif (is_string($this->input('brand')) && str_contains((string) $this->input('brand'), ',')) {
+            $this->merge(['brands' => array_values(array_filter(
+                explode(',', (string) $this->input('brand')),
                 fn (string $value): bool => $value !== '',
             ))]);
         }

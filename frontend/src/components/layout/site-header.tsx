@@ -2,9 +2,9 @@ import { ShoppingCart } from "lucide-react";
 
 import { BrandLogo } from "@/components/layout/brand-logo";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
+import { PrimaryNavigation } from "@/components/layout/primary-navigation";
 import { SearchForm } from "@/components/layout/search-form";
 import { Badge, Container } from "@/components/ui";
-import { primaryNavigation } from "@/config/navigation";
 import { HeaderAccount } from "@/features/auth";
 
 export function SiteHeader() {
@@ -14,27 +14,7 @@ export function SiteHeader() {
         <Container className="flex h-20 items-center gap-3 lg:h-24 lg:gap-5">
           <MobileNavigation />
           <BrandLogo className="shrink-0" compactOnMobile />
-          <nav
-            className="ml-auto hidden lg:block"
-            aria-label="Primary navigation"
-          >
-            <ul className="flex items-center gap-1 xl:gap-2">
-              {primaryNavigation.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={
-                      item.href === "/"
-                        ? "text-brand-700 border-brand-600 block border-b-2 px-3 py-3 text-sm font-semibold"
-                        : "text-ink hover:text-brand-700 focus-visible:outline-brand-600 block px-3 py-3 text-sm font-semibold transition-colors focus-visible:rounded-md focus-visible:outline-2"
-                    }
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <PrimaryNavigation />
           <SearchForm className="ml-auto hidden w-56 xl:block" />
           <HeaderAccount />
           <a
