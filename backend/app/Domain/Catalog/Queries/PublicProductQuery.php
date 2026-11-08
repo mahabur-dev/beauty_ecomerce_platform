@@ -56,12 +56,12 @@ final class PublicProductQuery
             $query->whereHas('primaryCategory.parent', fn (Builder $parent) => $parent->where('slug', $slug));
         }
 
-        $subcategories = $filters['subcategories'] ?? (isset($filters['subcategory']) && $filters['subcategory'] !== null && $filters['subcategory'] !== '' ? [$filters['subcategory']] : []);
+        $subcategories = $filters['subcategories'] ?? (isset($filters['subcategory']) && $filters['subcategory'] !== '' ? [$filters['subcategory']] : []);
         if ($subcategories !== []) {
             $query->whereHas('primaryCategory', fn (Builder $category) => $category->whereIn('slug', $subcategories));
         }
 
-        $brands = $filters['brands'] ?? (isset($filters['brand']) && $filters['brand'] !== null && $filters['brand'] !== '' ? [$filters['brand']] : []);
+        $brands = $filters['brands'] ?? (isset($filters['brand']) && $filters['brand'] !== '' ? [$filters['brand']] : []);
         if ($brands !== []) {
             $query->whereHas('brand', fn (Builder $brand) => $brand->whereIn('slug', $brands));
         }

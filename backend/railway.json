@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "preDeployCommand": ["/usr/local/bin/predeploy.sh"],
+    "preDeployTimeoutSeconds": 300,
+    "healthcheckPath": "/up",
+    "healthcheckTimeout": 180,
+    "restartPolicyType": "ALWAYS",
+    "restartPolicyMaxRetries": 5,
+    "overlapSeconds": 30,
+    "drainingSeconds": 15
+  }
+}
