@@ -28,27 +28,25 @@ function readBrowserCookie(name: string): string | undefined {
   return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : undefined;
 }
 
-export async function initializeCsrfProtection(): Promise<string> {
-  const response = await fetch(`${apiOrigin()}/sanctum/csrf-cookie`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-    },
-  });
+export async function initializeCsrfProtection(): Promise<string | undefined> {
+  try {
+    const response = await fetch(`${apiOrigin()}/sanctum/csrf-cookie`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error("Unable to initialize a secure session.");
+    if (!response.ok) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
   }
 
-  const token = readBrowserCookie("XSRF-TOKEN");
-
-  if (!token) {
-    throw new Error("The secure session cookie was not received.");
-  }
-
-  return token;
+  return readBrowserCookie("XSRF-TOKEN");
 }
 
 async function authenticatedMutation<T>(
@@ -57,12 +55,17 @@ async function authenticatedMutation<T>(
 ): Promise<T> {
   const csrfToken = await initializeCsrfProtection();
 
+  const headers: Record<string, string> = {
+    "X-Requested-With": "XMLHttpRequest",
+  };
+
+  if (csrfToken) {
+    headers["X-XSRF-TOKEN"] = csrfToken;
+  }
+
   return apiRequest<T>(path, {
     method: options.method ?? "POST",
-    headers: {
-      "X-Requested-With": "XMLHttpRequest",
-      "X-XSRF-TOKEN": csrfToken,
-    },
+    headers,
     ...(options.json === undefined ? {} : { json: options.json }),
   });
 }

@@ -29,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->statefulApi();
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+            'sanctum/csrf-cookie',
+        ]);
         $middleware->append(AssignRequestId::class);
         $middleware->alias([
             'admin' => EnsureAdministrator::class,
