@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { loginAdmin } from "@/features/auth/api";
@@ -32,16 +33,25 @@ export function LoginForm() {
     setError("");
     try {
       const result = await loginAdmin(values.data);
+      client.removeQueries({ queryKey: currentAdminQuery.queryKey });
+
+      /*
+      // [MFA FLOW - TEMPORARILY DISABLED]
+      // Uncomment below when re-enabling MFA:
       if (result.next !== "mfa_setup" && result.next !== "mfa_challenge") {
         throw new Error("Unexpected authentication response.");
       }
-      client.removeQueries({ queryKey: currentAdminQuery.queryKey });
       const next = encodeURIComponent(
         safeInternalPath(searchParams.get("next")),
       );
       router.replace(
         `/mfa/${result.next === "mfa_setup" ? "setup" : "challenge"}?next=${next}`,
       );
+      */
+
+      // [DIRECT DASHBOARD ACCESS - TEMPORARY BYPASS]
+      const destination = safeInternalPath(searchParams.get("next"));
+      router.replace(destination as Route);
     } catch (caught) {
       setError(
         caught instanceof ApiError
@@ -149,10 +159,13 @@ export function LoginForm() {
         )}
       </button>
 
+      {/* 
+      // [MFA BADGE - TEMPORARILY HIDDEN]
       <div className="mt-3 flex items-center justify-center gap-2 border-t border-[#f0f1f6] pt-4 text-[11px] text-[#777b91]">
         <Icon name="shield" size={14} className="text-[#ed267c]" />
         <span>Enterprise MFA verification required</span>
       </div>
+      */}
     </form>
   );
 }

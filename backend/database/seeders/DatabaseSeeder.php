@@ -20,5 +20,9 @@ class DatabaseSeeder extends Seeder
             CatalogSeeder::class,
             ProductSeeder::class,
         ]);
+
+        if (! app()->environment('testing')) {
+            $this->call(SuperAdminSeeder::class);
+        }
     }
 }

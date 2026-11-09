@@ -33,11 +33,22 @@ final class AdminAuthController extends Controller
             throw new IdentityRuleException('Email verification is required.', 403, 'Email verification required');
         }
 
+        /*
+        // [MFA FEATURE - TEMPORARILY DISABLED]
+        // Uncomment this block when re-enabling MFA setup/challenge:
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         Auth::forgetGuards();
         $request->session()->put((string) config('identity.pending_admin_session_key'), $user->getKey());
+
+        return response()->json([
+            'next' => $user->hasConfirmedMfa() ? 'mfa_challenge' : 'mfa_setup',
+        ], Response::HTTP_ACCEPTED);
+        */
+
+        // [DIRECT LOGIN - TEMPORARY BYPASS]
+        $this->completeLogin($request, $user);
 
         return response()->json([
             'next' => $user->hasConfirmedMfa() ? 'mfa_challenge' : 'mfa_setup',
