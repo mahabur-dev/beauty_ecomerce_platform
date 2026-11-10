@@ -5,6 +5,7 @@ use App\Domain\Identity\Exceptions\IdentityRuleException;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureAdministrator;
 use App\Http\Middleware\EnsureAdminMfa;
+use App\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use App\Http\Middleware\EnsurePendingAdministrator;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Responses\ProblemDetailsResponseFactory;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful as SanctumEnsureFrontendRequestsAreStateful;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -29,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->statefulApi();
+        $middleware->replaceInGroup(
+            'api',
+            SanctumEnsureFrontendRequestsAreStateful::class,
+            EnsureFrontendRequestsAreStateful::class,
+        );
         $middleware->validateCsrfTokens(except: [
             'api/*',
             'sanctum/csrf-cookie',
