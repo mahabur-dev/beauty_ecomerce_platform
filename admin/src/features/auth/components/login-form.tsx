@@ -33,6 +33,7 @@ export function LoginForm() {
     setError("");
     try {
       const result = await loginAdmin(values.data);
+      void result;
       client.removeQueries({ queryKey: currentAdminQuery.queryKey });
 
       /*

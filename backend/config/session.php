@@ -169,7 +169,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV', 'local') === 'production'),
 
     /*
     |--------------------------------------------------------------------------
@@ -199,7 +199,7 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'none'),
+    'same_site' => env('SESSION_SAME_SITE', env('APP_ENV', 'local') === 'production' ? 'none' : 'lax'),
 
     /*
     |--------------------------------------------------------------------------
@@ -212,7 +212,7 @@ return [
     |
     */
 
-    'partitioned' => env('SESSION_PARTITIONED_COOKIE', true),
+    'partitioned' => env('SESSION_PARTITIONED_COOKIE', env('APP_ENV', 'local') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

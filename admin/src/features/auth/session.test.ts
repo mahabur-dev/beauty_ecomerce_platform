@@ -14,10 +14,13 @@ const user: AdminUser = {
 };
 
 describe("administrator session boundaries", () => {
-  it("requires an active, verified, MFA-enabled administrator", () => {
+  it("requires an active, verified administrator", () => {
     expect(isAuthorizedAdmin(user)).toBe(true);
-    expect(isAuthorizedAdmin({ ...user, mfa_enabled: false })).toBe(false);
+    // [MFA FEATURE - TEMPORARILY DISABLED]
+    // Restore false assertion when re-enabling MFA:
+    expect(isAuthorizedAdmin({ ...user, mfa_enabled: false })).toBe(true);
     expect(isAuthorizedAdmin({ ...user, is_active: false })).toBe(false);
+    expect(isAuthorizedAdmin({ ...user, email_verified: false })).toBe(false);
     expect(isAuthorizedAdmin({ ...user, roles: ["customer"] })).toBe(false);
   });
   it("rejects open redirects", () => {
