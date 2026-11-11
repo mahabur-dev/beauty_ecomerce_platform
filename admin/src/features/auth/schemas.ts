@@ -14,7 +14,7 @@ export const adminUserSchema = z.object({
 });
 
 export const adminLoginResponseSchema = z.object({
-  next: z.enum(["mfa_setup", "mfa_challenge"]),
+  next: z.enum(["authenticated", "mfa_setup", "mfa_challenge"]),
 });
 
 export const mfaSetupResponseSchema = z.object({

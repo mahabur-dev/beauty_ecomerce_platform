@@ -2,6 +2,7 @@
 
 use App\Domain\Catalog\Exceptions\CatalogRuleException;
 use App\Domain\Identity\Exceptions\IdentityRuleException;
+use App\Domain\Review\Exceptions\ReviewRuleException;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureAdministrator;
 use App\Http\Middleware\EnsureAdminMfa;
@@ -81,6 +82,19 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (CatalogRuleException $exception, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return app(ProblemDetailsResponseFactory::class)->make(
+                request: $request,
+                status: $exception->status,
+                title: $exception->title,
+                detail: $exception->getMessage(),
+            );
+        });
+
+        $exceptions->render(function (ReviewRuleException $exception, Request $request) {
             if (! $request->is('api/*')) {
                 return null;
             }

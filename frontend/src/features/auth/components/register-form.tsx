@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { Button, Input } from "@/components/ui";
@@ -14,19 +14,22 @@ import {
   zodFieldErrors,
   type AuthFieldErrors,
 } from "../schemas";
+import { buildAuthHrefWithNext } from "../utils";
 import { FormAlert } from "./form-alert";
 import { PasswordInput } from "./password-input";
 
-export function RegisterForm() {
+export function RegisterForm({ nextPath }: { nextPath?: string | undefined }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [formError, setFormError] = useState<string>();
+  const rawNext = nextPath ?? searchParams.get("next") ?? undefined;
   const mutation = useMutation({
     mutationFn: register,
     onSuccess: (user) => {
       queryClient.setQueryData(currentUserQueryKey, user);
-      router.push("/verify-email");
+      router.replace(buildAuthHrefWithNext("/verify-email", rawNext));
       router.refresh();
     },
     onError: (error) => {
@@ -57,7 +60,11 @@ export function RegisterForm() {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert>{formError}</FormAlert> : null}
+      {formError ? (
+        <FormAlert onDismiss={() => setFormError(undefined)}>
+          {formError}
+        </FormAlert>
+      ) : null}
       <Input
         label="Full name"
         name="name"

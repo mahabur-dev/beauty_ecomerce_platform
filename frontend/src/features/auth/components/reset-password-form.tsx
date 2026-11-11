@@ -58,7 +58,9 @@ export function ResetPasswordForm({
   if (!token) {
     return (
       <div className="space-y-5">
-        <FormAlert>This password reset link is incomplete.</FormAlert>
+        <FormAlert durationMs={0} dismissible={false}>
+          This password reset link is incomplete.
+        </FormAlert>
         <Link
           href="/forgot-password"
           className="text-brand-700 text-sm font-semibold underline-offset-4 hover:underline"
@@ -72,7 +74,9 @@ export function ResetPasswordForm({
   if (mutation.isSuccess) {
     return (
       <div className="space-y-6">
-        <FormAlert tone="success">{mutation.data.message}</FormAlert>
+        <FormAlert tone="success" durationMs={0} dismissible={false}>
+          {mutation.data.message}
+        </FormAlert>
         <Link
           href="/login"
           className="text-brand-700 text-sm font-semibold underline-offset-4 hover:underline"
@@ -85,7 +89,11 @@ export function ResetPasswordForm({
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert>{formError}</FormAlert> : null}
+      {formError ? (
+        <FormAlert onDismiss={() => setFormError(undefined)}>
+          {formError}
+        </FormAlert>
+      ) : null}
       <Input
         label="Email address"
         name="email"

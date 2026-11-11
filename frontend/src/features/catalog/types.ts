@@ -17,12 +17,20 @@ export interface CatalogQuery {
   perPage: number;
 }
 
+export interface CatalogCategoryImage {
+  url: string;
+  format?: string | null;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface CatalogCategory {
   id: number;
   parent_id: number | null;
   name: string;
   slug: string;
   description: string | null;
+  image?: CatalogCategoryImage | null;
   parent?: Pick<CatalogCategory, "id" | "name" | "slug"> | null;
   subcategories?: CatalogCategory[];
 }

@@ -2263,6 +2263,22 @@ a {
   background: #f1f5f9;
   color: #64748b;
 }
+.catalog-status-pending {
+  background: #fef3e3;
+  color: #b45309;
+}
+.catalog-status-approved {
+  background: #e4f8ed;
+  color: #189a64;
+}
+.catalog-status-rejected {
+  background: #fff1f2;
+  color: #be123c;
+}
+.catalog-status-hidden {
+  background: #f1f5f9;
+  color: #475569;
+}
 .catalog-actions {
   display: flex;
   justify-content: flex-end;
@@ -3178,6 +3194,289 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .catalog-page,
   .catalog-modal-overlay {
+    animation: none;
+  }
+}
+
+/* Review Moderation Module — aligned with GlowCare Admin Design System */
+.reviews-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 0 21px 16px;
+}
+.reviews-date-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #64748b;
+  min-height: 36px;
+}
+.reviews-date-field span {
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+.reviews-date-field input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.reviews-toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.reviews-toggle-chip:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.reviews-toggle-chip-active {
+  border-color: var(--gc-primary);
+  background: var(--gc-light);
+  color: var(--gc-primary-dark);
+}
+.reviews-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.reviews-star-filled {
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+.reviews-star-empty {
+  color: #cbd5e1;
+}
+.reviews-cell-snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 290px;
+}
+.reviews-cell-snippet strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reviews-cell-snippet p {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.reviews-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.reviews-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 2px 7px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+.reviews-pill-brand {
+  background: var(--gc-light);
+  border-color: #fbcfe8;
+  color: var(--gc-primary-dark);
+}
+.reviews-pill-danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+.reviews-section-card {
+  border: 1px solid var(--gc-border);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.reviews-section-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.reviews-section-card-head h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.reviews-media-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.reviews-media-thumb {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.reviews-media-thumb:hover,
+.reviews-media-thumb-active {
+  border-color: var(--gc-primary);
+  box-shadow: 0 0 0 2px #fce3ef;
+}
+.reviews-media-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.reviews-media-lightbox {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.reviews-media-lightbox img,
+.reviews-media-lightbox video {
+  max-height: 320px;
+  max-width: 100%;
+  border-radius: 8px;
+}
+.reviews-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.reviews-target-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.reviews-target-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.reviews-target-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.reviews-target-approved {
+  border-color: #189a64;
+  background: #e4f8ed;
+  color: #166534;
+}
+.reviews-target-rejected {
+  border-color: #e11d48;
+  background: #fff1f2;
+  color: #be123c;
+}
+.reviews-target-hidden {
+  border-color: #64748b;
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.reviews-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.reviews-preset-chip {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.reviews-preset-chip:hover {
+  border-color: #fbcfe8;
+  background: #fff0f7;
+  color: var(--gc-primary-dark);
+}
+.reviews-skeleton-row {
+  height: 52px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  margin: 10px 21px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (max-width: 640px) {
+  .reviews-filter-bar {
+    padding: 0 17px 14px;
+  }
+  .reviews-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reviews-skeleton-row {
     animation: none;
   }
 }

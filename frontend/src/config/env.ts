@@ -29,12 +29,19 @@ const publicEnvironmentSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().trim().min(1).default("GlowCare"),
   NEXT_PUBLIC_APP_URL: publicUrl("http://localhost:3000"),
   NEXT_PUBLIC_API_BASE_URL: publicUrl("http://localhost:8000/api/v1"),
+  NEXT_PUBLIC_REVIEW_VIDEO_ENABLED: z
+    .enum(["true", "false", "1", "0"])
+    .optional()
+    .default("false")
+    .transform((value) => value === "true" || value === "1"),
 });
 
 const rawEnvironment = {
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_REVIEW_VIDEO_ENABLED:
+    process.env.NEXT_PUBLIC_REVIEW_VIDEO_ENABLED,
 };
 
 const parsedResult = publicEnvironmentSchema.safeParse(rawEnvironment);
@@ -65,4 +72,5 @@ export const env = Object.freeze({
   appName: parsed.NEXT_PUBLIC_APP_NAME,
   appUrl: parsed.NEXT_PUBLIC_APP_URL,
   apiBaseUrl: parsed.NEXT_PUBLIC_API_BASE_URL,
+  reviewVideoEnabled: parsed.NEXT_PUBLIC_REVIEW_VIDEO_ENABLED,
 });

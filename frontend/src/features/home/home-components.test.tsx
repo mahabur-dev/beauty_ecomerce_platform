@@ -1,19 +1,30 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { CatalogCategory, CatalogProduct } from "@/features/catalog/types";
-import { CategoryCard, ProductCard } from "@/features/home/components";
-import type { HomeCategory, PreviewProduct } from "@/features/home/data";
+import {
+  CategoryCard,
+  CategoryCarousel,
+  ProductCard,
+  SectionHeading,
+} from "@/features/home/components";
+import type { PreviewProduct } from "@/features/home/data";
 
 describe("Home Page Components", () => {
   describe("CategoryCard", () => {
-    it("renders dynamic backend category with link and subcategory count", () => {
+    it("renders dynamic backend category image when Cloudinary asset exists", () => {
       const mockCategory: CatalogCategory = {
         id: 7,
         parent_id: null,
         name: "Eye Makeup",
         slug: "eye-makeup",
         description: "Best eye makeup products",
+        image: {
+          url: "https://res.cloudinary.com/demo/image/upload/categories/7/eye-makeup.jpg",
+          format: "jpg",
+          width: 800,
+          height: 800,
+        },
         subcategories: [
           {
             id: 8,
@@ -30,24 +41,108 @@ describe("Home Page Components", () => {
       expect(screen.getByText("Eye Makeup")).toBeInTheDocument();
       expect(screen.getByText("1 subcategory")).toBeInTheDocument();
 
+      const image = screen.getByRole("img", { name: "Eye Makeup" });
+      expect(image).toHaveAttribute(
+        "src",
+        expect.stringContaining("res.cloudinary.com"),
+      );
+
       const link = screen.getByRole("link", { name: /eye makeup/i });
       expect(link).toHaveAttribute("href", "/categories/eye-makeup");
     });
 
-    it("renders fallback home category correctly", () => {
-      const mockHomeCategory: HomeCategory = {
+    it("renders clean icon placeholder instead of hardcoded images when category has no uploaded image", () => {
+      const mockCategory: CatalogCategory = {
+        id: 9,
+        parent_id: null,
         name: "Skin Care",
-        productCount: "120+ Products",
-        image: "/images/storefront/category-skin-care.png",
-        href: "/categories/skin-care",
+        slug: "skin-care",
+        description: null,
+        image: null,
+        subcategories: [],
       };
 
-      render(<CategoryCard category={mockHomeCategory} />);
+      const { container } = render(<CategoryCard category={mockCategory} />);
 
       expect(screen.getByText("Skin Care")).toBeInTheDocument();
-      expect(screen.getByText("120+ Products")).toBeInTheDocument();
+      expect(screen.getByText("Explore collection")).toBeInTheDocument();
+      expect(container.querySelector("img")).toBeNull();
       const link = screen.getByRole("link", { name: /skin care/i });
       expect(link).toHaveAttribute("href", "/categories/skin-care");
+    });
+  });
+
+  describe("CategoryCarousel & SectionHeading overflow behavior", () => {
+    function buildCategories(count: number): CatalogCategory[] {
+      return Array.from({ length: count }, (_, idx) => ({
+        id: idx + 1,
+        parent_id: null,
+        name: `Category ${idx + 1}`,
+        slug: `category-${idx + 1}`,
+        description: null,
+        image: null,
+        subcategories: [],
+      }));
+    }
+
+    it("hides shift arrows and View All Categories when 5 or fewer categories exist", () => {
+      render(
+        <>
+          <SectionHeading title="Shop by Category" />
+          <CategoryCarousel categories={buildCategories(5)} />
+        </>,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: "Previous categories" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Next categories" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: /View All Categories/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Category 5")).toBeInTheDocument();
+    });
+
+    it("renders left/right shift buttons and slides smoothly across 7 categories", () => {
+      render(
+        <>
+          <SectionHeading
+            title="Shop by Category"
+            actionLabel="View All Categories"
+            actionHref="/categories"
+          />
+          <CategoryCarousel categories={buildCategories(7)} />
+        </>,
+      );
+
+      expect(
+        screen.getByRole("link", { name: /View All Categories/i }),
+      ).toHaveAttribute("href", "/categories");
+
+      const prevBtn = screen.getByRole("button", {
+        name: "Previous categories",
+      });
+      const nextBtn = screen.getByRole("button", { name: "Next categories" });
+      const track = screen.getByTestId("category-carousel-track");
+
+      expect(prevBtn).toBeDisabled();
+      expect(nextBtn).toBeEnabled();
+      expect(track.style.transform).toBe("translateX(-0%)");
+
+      fireEvent.click(nextBtn);
+      expect(prevBtn).toBeEnabled();
+      expect(nextBtn).toBeEnabled();
+      expect(track.style.transform).toBe("translateX(-20%)");
+
+      fireEvent.click(nextBtn);
+      expect(track.style.transform).toBe("translateX(-40%)");
+      expect(nextBtn).toBeDisabled();
+
+      fireEvent.click(prevBtn);
+      expect(track.style.transform).toBe("translateX(-20%)");
+      expect(nextBtn).toBeEnabled();
     });
   });
 

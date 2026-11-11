@@ -2,14 +2,43 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Heart, Menu, ShoppingBag, UserRound } from "lucide-react";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Heart, LogIn, Menu, ShoppingBag, UserRound } from "lucide-react";
+import { Suspense, useState } from "react";
 
 import { isRouteActive } from "@/components/layout/primary-navigation";
 import { SearchForm } from "@/components/layout/search-form";
 import { Button, Modal } from "@/components/ui";
 import { customerNavigation, primaryNavigation } from "@/config/navigation";
+import { useCurrentUser } from "@/features/auth/hooks";
+import { buildLoginHrefForLocation } from "@/features/auth/utils";
+
+function MobileSignInLink({ onNavigate }: { onNavigate: () => void }) {
+  const userQuery = useCurrentUser();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  if (userQuery.data) {
+    return null;
+  }
+
+  const loginHref = buildLoginHrefForLocation(
+    pathname,
+    searchParams.toString(),
+    searchParams.get("next"),
+  );
+
+  return (
+    <Link
+      href={loginHref}
+      onClick={onNavigate}
+      className="border-brand-200 bg-brand-50 text-brand-800 hover:bg-brand-100 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors"
+    >
+      <LogIn className="text-brand-700 size-4.5" aria-hidden="true" />
+      Sign in
+    </Link>
+  );
+}
 
 export function MobileNavigation() {
   const [open, setOpen] = useState(false);
@@ -67,13 +96,16 @@ export function MobileNavigation() {
             Your account
           </p>
           <div className="grid gap-2">
+            <Suspense fallback={null}>
+              <MobileSignInLink onNavigate={() => setOpen(false)} />
+            </Suspense>
             {customerNavigation.map((item, index) => {
               const Icon = [UserRound, ShoppingBag, Heart][index] ?? UserRound;
 
               return (
-                <a
+                <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as Route}
                   onClick={() => setOpen(false)}
                   className="border-line hover:border-brand-200 hover:bg-brand-50 flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors"
                 >
@@ -82,7 +114,7 @@ export function MobileNavigation() {
                     aria-hidden="true"
                   />
                   {item.label}
-                </a>
+                </Link>
               );
             })}
           </div>

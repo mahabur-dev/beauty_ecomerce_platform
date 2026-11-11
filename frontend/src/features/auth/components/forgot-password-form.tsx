@@ -46,7 +46,9 @@ export function ForgotPasswordForm() {
   if (mutation.isSuccess) {
     return (
       <div className="space-y-6">
-        <FormAlert tone="success">{mutation.data.message}</FormAlert>
+        <FormAlert tone="success" durationMs={0} dismissible={false}>
+          {mutation.data.message}
+        </FormAlert>
         <p className="text-ink-muted text-sm leading-6">
           For your security, the message is the same whether or not an account
           exists. Check your inbox and spam folder.
@@ -63,7 +65,11 @@ export function ForgotPasswordForm() {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert>{formError}</FormAlert> : null}
+      {formError ? (
+        <FormAlert onDismiss={() => setFormError(undefined)}>
+          {formError}
+        </FormAlert>
+      ) : null}
       <Input
         label="Email address"
         name="email"

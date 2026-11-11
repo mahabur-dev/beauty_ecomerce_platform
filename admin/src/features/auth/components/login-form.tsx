@@ -33,26 +33,18 @@ export function LoginForm() {
     setError("");
     try {
       const result = await loginAdmin(values.data);
-      void result;
       client.removeQueries({ queryKey: currentAdminQuery.queryKey });
 
-      /*
-      // [MFA FLOW - TEMPORARILY DISABLED]
-      // Uncomment below when re-enabling MFA:
-      if (result.next !== "mfa_setup" && result.next !== "mfa_challenge") {
-        throw new Error("Unexpected authentication response.");
+      const destination = safeInternalPath(searchParams.get("next"));
+      if (result.next === "authenticated") {
+        router.replace(destination as Route);
+        return;
       }
-      const next = encodeURIComponent(
-        safeInternalPath(searchParams.get("next")),
-      );
+
+      const next = encodeURIComponent(destination);
       router.replace(
         `/mfa/${result.next === "mfa_setup" ? "setup" : "challenge"}?next=${next}`,
       );
-      */
-
-      // [DIRECT DASHBOARD ACCESS - TEMPORARY BYPASS]
-      const destination = safeInternalPath(searchParams.get("next"));
-      router.replace(destination as Route);
     } catch (caught) {
       setError(
         caught instanceof ApiError

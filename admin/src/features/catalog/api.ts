@@ -29,6 +29,7 @@ export interface CategoryInput {
   description: string | null;
   status: CategoryStatus;
   category_id?: number;
+  imageFile?: File | null | undefined;
 }
 
 export interface ProductInput {
@@ -93,8 +94,28 @@ export function createCategory(
   kind: "categories" | "subcategories",
   input: CategoryInput,
 ) {
+  const { imageFile, ...fields } = input;
+  if (imageFile) {
+    const body = new FormData();
+    body.set("name", fields.name);
+    body.set("slug", fields.slug);
+    if (fields.description !== null) {
+      body.set("description", fields.description);
+    }
+    body.set("status", fields.status);
+    if (fields.category_id !== undefined) {
+      body.set("category_id", String(fields.category_id));
+    }
+    body.set("image", imageFile);
+
+    return contract(
+      apiRequest(`/admin/${kind}`, { method: "POST", body }),
+      categoryResponseSchema,
+    ).then((response) => response.data);
+  }
+
   return contract(
-    apiRequest(`/admin/${kind}`, { method: "POST", json: input }),
+    apiRequest(`/admin/${kind}`, { method: "POST", json: fields }),
     categoryResponseSchema,
   ).then((response) => response.data);
 }
@@ -102,10 +123,34 @@ export function createCategory(
 export function updateCategory(
   kind: "categories" | "subcategories",
   id: number,
-  input: CategoryInput,
+  input: Omit<CategoryInput, "imageFile">,
 ) {
   return contract(
     apiRequest(`/admin/${kind}/${id}`, { method: "PATCH", json: input }),
+    categoryResponseSchema,
+  ).then((response) => response.data);
+}
+
+export function uploadCategoryImage(
+  kind: "categories" | "subcategories",
+  id: number,
+  image: File,
+) {
+  const body = new FormData();
+  body.set("image", image);
+
+  return contract(
+    apiRequest(`/admin/${kind}/${id}/image`, { method: "POST", body }),
+    categoryResponseSchema,
+  ).then((response) => response.data);
+}
+
+export function deleteCategoryImage(
+  kind: "categories" | "subcategories",
+  id: number,
+) {
+  return contract(
+    apiRequest(`/admin/${kind}/${id}/image`, { method: "DELETE" }),
     categoryResponseSchema,
   ).then((response) => response.data);
 }

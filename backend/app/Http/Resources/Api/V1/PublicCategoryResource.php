@@ -18,6 +18,7 @@ final class PublicCategoryResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'description' => $this->description,
+            'image' => $this->imagePayload(),
             'parent' => $this->whenLoaded('parent', fn () => $this->parent === null ? null : [
                 'id' => $this->parent->getKey(),
                 'name' => $this->parent->name,

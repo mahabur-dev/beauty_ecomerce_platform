@@ -1,4 +1,5 @@
 export * from "./account-actions";
+export * from "./account-view";
 export * from "./auth-card";
 export * from "./auth-page";
 export * from "./auth-route-fallback";
@@ -7,4 +8,5 @@ export * from "./header-account";
 export * from "./login-form";
 export * from "./register-form";
 export * from "./reset-password-form";
+export * from "./sign-out-button";
 export * from "./verify-email-panel";

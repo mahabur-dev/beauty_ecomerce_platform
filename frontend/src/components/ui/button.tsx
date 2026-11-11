@@ -1,11 +1,11 @@
 import { LoaderCircle } from "lucide-react";
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = {
   primary:
-    "bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:outline-brand-600",
+    "bg-brand-600 text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 focus-visible:outline-brand-600",
   secondary:
     "bg-brand-50 text-brand-800 hover:bg-brand-100 focus-visible:outline-brand-600",
   outline:
@@ -13,7 +13,9 @@ const buttonVariants = {
   ghost:
     "text-ink-muted hover:bg-brand-50 hover:text-ink focus-visible:outline-brand-600",
   danger:
-    "bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-red-600",
+    "border border-danger-700/15 bg-danger-600 text-white shadow-sm shadow-danger-600/25 hover:bg-danger-700 hover:shadow-md hover:shadow-danger-700/25 active:bg-danger-800 focus-visible:outline-danger-600",
+  "danger-outline":
+    "border border-danger-200 bg-danger-50/80 text-danger-700 shadow-xs hover:border-danger-300 hover:bg-danger-100 hover:text-danger-800 focus-visible:outline-danger-600",
 } as const;
 
 const buttonSizes = {
@@ -36,7 +38,7 @@ export function buttonStyles({
   className?: string | undefined;
 } = {}): string {
   return cn(
-    "inline-flex shrink-0 items-center justify-center font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex shrink-0 cursor-pointer items-center justify-center font-semibold transition-all duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50",
     buttonVariants[variant],
     buttonSizes[size],
     className,
@@ -47,6 +49,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  loadingText?: string;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -56,6 +61,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       disabled,
       isLoading = false,
+      loadingText,
+      leftIcon,
+      rightIcon,
       size = "md",
       type = "button",
       variant = "primary",
@@ -74,8 +82,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-        ) : null}
-        {children}
+        ) : (
+          leftIcon
+        )}
+        {isLoading && loadingText ? loadingText : children}
+        {!isLoading ? rightIcon : null}
       </button>
     );
   },

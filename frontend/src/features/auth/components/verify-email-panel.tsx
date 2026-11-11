@@ -10,6 +10,7 @@ import { Button } from "@/components/ui";
 import { resendVerificationEmail, verifyEmail } from "../api";
 import { authErrorMessage } from "../errors";
 import { currentUserQueryKey, useCurrentUser } from "../hooks";
+import { buildAuthHrefWithNext, safeReturnPath } from "../utils";
 import { FormAlert } from "./form-alert";
 
 interface VerificationParams {
@@ -21,12 +22,19 @@ interface VerificationParams {
 
 export function VerifyEmailPanel({
   verification,
+  nextPath,
 }: {
   verification?: VerificationParams | undefined;
+  nextPath?: string | undefined;
 }) {
   const queryClient = useQueryClient();
   const started = useRef(false);
   const userQuery = useCurrentUser();
+  const continueHref = safeReturnPath(nextPath);
+  const loginReturnHref = buildAuthHrefWithNext(
+    "/login",
+    buildAuthHrefWithNext("/verify-email", nextPath),
+  );
   const verifyMutation = useMutation({
     mutationFn: verifyEmail,
     onSuccess: async () => {
@@ -58,14 +66,14 @@ export function VerifyEmailPanel({
         <span className="bg-brand-100 text-brand-700 mx-auto grid size-16 place-items-center rounded-full">
           <MailCheck className="size-8" aria-hidden="true" />
         </span>
-        <FormAlert tone="success">
+        <FormAlert tone="success" durationMs={0} dismissible={false}>
           Your email address is verified. Your account is ready.
         </FormAlert>
         <Link
-          href="/account"
+          href={continueHref}
           className="bg-brand-600 hover:bg-brand-700 inline-flex h-12 items-center justify-center rounded-xl px-6 text-sm font-semibold text-white transition-colors"
         >
-          Continue to my account
+          {continueHref === "/account" ? "Continue to my account" : "Continue"}
         </Link>
       </div>
     );
@@ -74,9 +82,11 @@ export function VerifyEmailPanel({
   if (!userQuery.isPending && !userQuery.data) {
     return (
       <div className="space-y-5">
-        <FormAlert>You need to sign in before verifying your email.</FormAlert>
+        <FormAlert durationMs={0} dismissible={false}>
+          You need to sign in before verifying your email.
+        </FormAlert>
         <Link
-          href="/login?next=/verify-email"
+          href={loginReturnHref}
           className="text-brand-700 text-sm font-semibold underline-offset-4 hover:underline"
         >
           Sign in to continue

@@ -1,60 +1,52 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LogOut, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { Mail } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui";
 
-import { logout, resendVerificationEmail } from "../api";
+import { resendVerificationEmail } from "../api";
 import { authErrorMessage } from "../errors";
-import { currentUserQueryKey } from "../hooks";
 import { FormAlert } from "./form-alert";
+import { SignOutButton } from "./sign-out-button";
 
 export function AccountActions({ emailVerified }: { emailVerified: boolean }) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      queryClient.setQueryData(currentUserQueryKey, null);
-      queryClient.removeQueries({ queryKey: currentUserQueryKey });
-      router.replace("/login");
-      router.refresh();
-    },
-  });
+  const [logoutError, setLogoutError] = useState<string>();
   const resendMutation = useMutation({ mutationFn: resendVerificationEmail });
 
   return (
     <div className="space-y-4">
       {resendMutation.isSuccess ? (
-        <FormAlert tone="success">{resendMutation.data.message}</FormAlert>
+        <FormAlert tone="success" onDismiss={() => resendMutation.reset()}>
+          {resendMutation.data.message}
+        </FormAlert>
       ) : null}
       {resendMutation.isError ? (
-        <FormAlert>{authErrorMessage(resendMutation.error)}</FormAlert>
+        <FormAlert onDismiss={() => resendMutation.reset()}>
+          {authErrorMessage(resendMutation.error)}
+        </FormAlert>
       ) : null}
-      {logoutMutation.isError ? (
-        <FormAlert>{authErrorMessage(logoutMutation.error)}</FormAlert>
+      {logoutError ? (
+        <FormAlert onDismiss={() => setLogoutError(undefined)}>
+          {logoutError}
+        </FormAlert>
       ) : null}
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         {!emailVerified ? (
           <Button
             variant="outline"
+            leftIcon={<Mail className="size-4" aria-hidden="true" />}
             isLoading={resendMutation.isPending}
             onClick={() => resendMutation.mutate()}
           >
-            <Mail className="size-4" aria-hidden="true" />
             Resend verification
           </Button>
         ) : null}
-        <Button
-          variant="ghost"
-          isLoading={logoutMutation.isPending}
-          onClick={() => logoutMutation.mutate()}
-        >
-          <LogOut className="size-4" aria-hidden="true" />
-          Sign out
-        </Button>
+        <SignOutButton
+          className="w-full sm:w-auto"
+          onError={setLogoutError}
+        />
       </div>
     </div>
   );

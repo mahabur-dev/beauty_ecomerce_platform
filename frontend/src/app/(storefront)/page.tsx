@@ -1,16 +1,18 @@
+import { FolderTree } from "lucide-react";
 import { Suspense } from "react";
 
+import { EmptyState } from "@/components/feedback";
 import { Container, Skeleton } from "@/components/ui";
 import { getCategories, getProducts } from "@/features/catalog/api";
 import {
-  CategoryCard,
+  CategoryCarousel,
   HomeHero,
   OfferBanner,
   ProductCard,
   SectionHeading,
   ServiceStrip,
 } from "@/features/home/components";
-import { homeCategories, previewProducts } from "@/features/home/data";
+import { previewProducts } from "@/features/home/data";
 
 export default function HomePage() {
   return (
@@ -36,40 +38,44 @@ export default function HomePage() {
 
 async function HomeCategoriesSection() {
   const categoriesResponse = await getCategories().catch(() => null);
-  const backendCategories =
+  const categories =
     categoriesResponse?.data && Array.isArray(categoriesResponse.data)
       ? categoriesResponse.data
       : [];
-  const displayCategories =
-    backendCategories.length > 0
-      ? backendCategories.slice(0, 10)
-      : homeCategories;
+  const hasMoreThanRow = categories.length > 5;
 
   return (
     <section aria-labelledby="category-heading">
       <div id="category-heading">
-        <SectionHeading
-          title="Shop by Category"
-          actionLabel="View All Categories"
-          actionHref="/categories"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {displayCategories.map((category) => (
-          <CategoryCard
-            key={"slug" in category ? category.slug : category.name}
-            category={category}
+        {hasMoreThanRow ? (
+          <SectionHeading
+            title="Shop by Category"
+            actionLabel="View All Categories"
+            actionHref="/categories"
           />
-        ))}
+        ) : (
+          <SectionHeading title="Shop by Category" />
+        )}
       </div>
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={FolderTree}
+          title="No categories yet"
+          description="Active categories will appear here once published from the catalog."
+        />
+      ) : (
+        <CategoryCarousel categories={categories} />
+      )}
     </section>
   );
 }
 
+const HOME_PRODUCTS_LIMIT = 10;
+
 async function HomeBestSellersSection() {
   const productsResponse = await getProducts({
     page: 1,
-    perPage: 10,
+    perPage: HOME_PRODUCTS_LIMIT,
     sort: "newest",
   }).catch(() => null);
 
@@ -79,17 +85,26 @@ async function HomeBestSellersSection() {
       : [];
   const displayProducts =
     backendProducts.length > 0
-      ? backendProducts.slice(0, 10)
-      : previewProducts;
+      ? backendProducts.slice(0, HOME_PRODUCTS_LIMIT)
+      : previewProducts.slice(0, HOME_PRODUCTS_LIMIT);
+  const totalProducts =
+    backendProducts.length > 0
+      ? (productsResponse?.meta?.total ?? backendProducts.length)
+      : displayProducts.length;
+  const hasMoreProducts = totalProducts > HOME_PRODUCTS_LIMIT;
 
   return (
     <section aria-labelledby="best-sellers-heading">
       <div id="best-sellers-heading">
-        <SectionHeading
-          title="Best Sellers"
-          actionLabel="View All Products"
-          actionHref="/products"
-        />
+        {hasMoreProducts ? (
+          <SectionHeading
+            title="Best Sellers"
+            actionLabel="View All Products"
+            actionHref="/products"
+          />
+        ) : (
+          <SectionHeading title="Best Sellers" />
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {displayProducts.map((product) => (

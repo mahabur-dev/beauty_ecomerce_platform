@@ -9,11 +9,17 @@ use App\Domain\Catalog\Models\Product;
 use App\Domain\Identity\Enums\RoleCode;
 use App\Domain\Identity\Models\Role;
 use App\Domain\Identity\Models\User;
+use App\Domain\Media\Contracts\MediaStorage;
+use App\Domain\Media\Data\UploadedAsset;
 use App\Domain\Shared\Enums\RecordStatus;
+use App\Jobs\DeleteMediaAsset;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class CatalogManagementTest extends TestCase
@@ -236,6 +242,78 @@ final class CatalogManagementTest extends TestCase
         $this->getJson('/api/v1/admin/categories')->assertOk();
     }
 
+    public function test_category_and_subcategory_support_single_cloudinary_image_upload_replace_and_delete(): void
+    {
+        Queue::fake();
+        $fakeMedia = new CategoryTestMediaStorage;
+        $this->app->instance(MediaStorage::class, $fakeMedia);
+        $this->authenticateAdministrator(RoleCode::CatalogManager);
+
+        $rootResponse = $this->post('/api/v1/admin/categories', [
+            'name' => 'Serums & Essences',
+            'description' => 'Concentrated facial treatments',
+            'image' => UploadedFile::fake()->image('serums.webp', 640, 640),
+        ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.slug', 'serums-essences')
+            ->assertJsonPath('data.image.format', 'jpg')
+            ->assertJsonPath('data.image.width', 640);
+
+        $rootId = (int) $rootResponse->json('data.id');
+        $firstUrl = (string) $rootResponse->json('data.image.url');
+        self::assertStringContainsString('/categories/'.$rootId.'/', (string) $fakeMedia->uploaded[0]);
+        self::assertStringStartsWith('https://res.cloudinary.com/', $firstUrl);
+
+        $childResponse = $this->post('/api/v1/admin/subcategories', [
+            'category_id' => $rootId,
+            'name' => 'Vitamin C Serums',
+            'image' => UploadedFile::fake()->image('vitc.png', 512, 512),
+        ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.parent_id', $rootId)
+            ->assertJsonPath('data.image.width', 512);
+        $childId = (int) $childResponse->json('data.id');
+
+        // Public endpoints expose safe image metadata and omit internal storage paths.
+        $this->getJson('/api/v1/categories')
+            ->assertOk()
+            ->assertJsonPath('data.0.image.url', $firstUrl)
+            ->assertJsonPath('data.0.subcategories.0.image.width', 512)
+            ->assertJsonMissingPath('data.0.image_storage_path')
+            ->assertJsonMissingPath('data.0.image_asset_id');
+
+        // Replacing root category image stores new Cloudinary asset and queues old asset deletion.
+        $replaceResponse = $this->post("/api/v1/admin/categories/{$rootId}/image", [
+            'image' => UploadedFile::fake()->image('serums-v2.jpg', 900, 900),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.image.width', 900);
+
+        $replacedUrl = (string) $replaceResponse->json('data.image.url');
+        self::assertNotSame($firstUrl, $replacedUrl);
+        Queue::assertPushed(DeleteMediaAsset::class, 1);
+
+        // Removing image via DELETE endpoint clears columns and dispatches Cloudinary deletion.
+        $this->deleteJson("/api/v1/admin/categories/{$rootId}/image")
+            ->assertOk()
+            ->assertJsonPath('data.image', null);
+        Queue::assertPushed(DeleteMediaAsset::class, 2);
+
+        // Removing subcategory image via PATCH remove_image=true works cleanly.
+        $this->patchJson("/api/v1/admin/subcategories/{$childId}", [
+            'remove_image' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.image', null);
+        Queue::assertPushed(DeleteMediaAsset::class, 3);
+
+        // Non-image files are rejected cleanly.
+        $this->post("/api/v1/admin/categories/{$rootId}/image", [
+            'image' => UploadedFile::fake()->create('script.pdf', 100, 'application/pdf'),
+        ], ['Accept' => 'application/json'])->assertUnprocessable()
+            ->assertJsonValidationErrors('image');
+    }
+
     private function authenticateAdministrator(RoleCode $roleCode): User
     {
         $user = User::factory()->create();
@@ -251,5 +329,39 @@ final class CatalogManagementTest extends TestCase
         ]);
 
         return $user;
+    }
+}
+
+final class CategoryTestMediaStorage implements MediaStorage
+{
+    /** @var list<string> */
+    public array $uploaded = [];
+
+    /** @var list<string> */
+    public array $deleted = [];
+
+    public function uploadImage(UploadedFile $file, string $folder): UploadedAsset
+    {
+        $id = (string) Str::uuid();
+        $publicId = trim($folder, '/').'/'.$id;
+        $this->uploaded[] = $publicId;
+        [$width, $height] = @getimagesize((string) $file->getRealPath()) ?: [800, 800];
+
+        return new UploadedAsset(
+            publicId: $publicId,
+            assetId: $id,
+            resourceType: 'image',
+            deliveryType: 'upload',
+            secureUrl: 'https://res.cloudinary.com/test/image/upload/'.$id.'.jpg',
+            format: 'jpg',
+            bytes: (int) $file->getSize(),
+            width: $width,
+            height: $height,
+        );
+    }
+
+    public function delete(string $publicId, string $resourceType, string $deliveryType): void
+    {
+        $this->deleted[] = $publicId;
     }
 }

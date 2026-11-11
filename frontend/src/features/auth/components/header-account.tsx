@@ -1,14 +1,36 @@
 "use client";
 
 import { UserRound } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import { buttonStyles } from "@/components/ui";
 
 import { useCurrentUser } from "../hooks";
+import { buildLoginHrefForLocation } from "../utils";
 
-export function HeaderAccount() {
+function SignInLink({ href }: { href: Route }) {
+  return (
+    <Link
+      href={href}
+      aria-label="Sign in"
+      className={buttonStyles({
+        variant: "ghost",
+        size: "icon",
+        className: "hidden sm:inline-flex",
+      })}
+    >
+      <UserRound className="size-5" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function HeaderAccountContent() {
   const userQuery = useCurrentUser();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = userQuery.data;
 
   if (user) {
@@ -24,17 +46,19 @@ export function HeaderAccount() {
     );
   }
 
+  const loginHref = buildLoginHrefForLocation(
+    pathname,
+    searchParams.toString(),
+    searchParams.get("next"),
+  );
+
+  return <SignInLink href={loginHref} />;
+}
+
+export function HeaderAccount() {
   return (
-    <Link
-      href="/login"
-      aria-label="Sign in"
-      className={buttonStyles({
-        variant: "ghost",
-        size: "icon",
-        className: "hidden sm:inline-flex",
-      })}
-    >
-      <UserRound className="size-5" aria-hidden="true" />
-    </Link>
+    <Suspense fallback={<SignInLink href="/login" />}>
+      <HeaderAccountContent />
+    </Suspense>
   );
 }

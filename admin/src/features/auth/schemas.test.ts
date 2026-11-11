@@ -49,6 +49,9 @@ describe("admin authentication schemas", () => {
 
   it("rejects unknown login and malformed MFA setup responses", () => {
     expect(
+      adminLoginResponseSchema.safeParse({ next: "authenticated" }).success,
+    ).toBe(true);
+    expect(
       adminLoginResponseSchema.safeParse({ next: "dashboard" }).success,
     ).toBe(false);
     expect(

@@ -20,11 +20,11 @@ describe("administrator authentication API", () => {
     document.cookie = "XSRF-TOKEN=csrf-token; Path=/";
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(jsonResponse({ next: "mfa_setup" }, 202));
+      .mockResolvedValue(jsonResponse({ next: "authenticated" }));
 
     await expect(
       loginAdmin({ email: "admin@example.com", password: "secret" }),
-    ).resolves.toEqual({ next: "mfa_setup" });
+    ).resolves.toEqual({ next: "authenticated" });
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, request] = fetchMock.mock.calls[0] ?? [];

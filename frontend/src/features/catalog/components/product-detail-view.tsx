@@ -4,10 +4,10 @@ import Link from "next/link";
 
 import { Container } from "@/components/ui";
 import type { CatalogProductDetail } from "@/features/catalog/types";
+import { ProductReviewsSection } from "@/features/reviews";
 
 import { ProductGallery } from "./product-gallery";
 import { ProductPurchaseBox } from "./product-purchase-box";
-import { ProductReviews } from "./product-reviews";
 
 export function ProductDetailView({
   product,
@@ -177,7 +177,10 @@ export function ProductDetailView({
 
         {/* Customer Reviews & Ratings Section */}
         <div className="border-line border-t pt-16">
-          <ProductReviews productName={product.name} />
+          <ProductReviewsSection
+            productSlug={product.slug}
+            productName={product.name}
+          />
         </div>
       </Container>
     </article>

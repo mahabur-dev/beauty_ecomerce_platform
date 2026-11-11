@@ -55,6 +55,7 @@ final class AuthenticationTest extends TestCase
 
     public function test_admin_password_login_requires_mfa_before_privileged_session(): void
     {
+        config(['identity.mfa_enabled' => true]);
         $admin = $this->makeAdministrator(RoleCode::SuperAdmin);
 
         $this->postJson('/api/v1/admin/auth/login', [
@@ -96,6 +97,30 @@ final class AuthenticationTest extends TestCase
         $this->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
 
+    public function test_admin_password_login_completes_when_mfa_is_disabled(): void
+    {
+        config(['identity.mfa_enabled' => false]);
+        $admin = $this->makeAdministrator(RoleCode::SuperAdmin);
+
+        $this->postJson('/api/v1/admin/auth/login', [
+            'email' => $admin->email,
+            'password' => self::PASSWORD,
+        ])->assertOk()->assertJsonPath('next', 'authenticated');
+
+        $this->getJson('/api/v1/admin/me')
+            ->assertOk()
+            ->assertJsonPath('data.id', $admin->getKey());
+
+        self::assertFalse(
+            session()->has((string) config('identity.mfa_verified_session_key')),
+        );
+
+        config(['identity.mfa_enabled' => true]);
+        $this->getJson('/api/v1/admin/me')
+            ->assertForbidden()
+            ->assertJsonPath('title', 'MFA required');
+    }
+
     public function test_password_reset_rotates_credentials_and_returns_generic_forgot_response(): void
     {
         $user = User::factory()->create(['password' => self::PASSWORD]);
@@ -119,6 +144,7 @@ final class AuthenticationTest extends TestCase
 
     public function test_recovery_code_is_single_use(): void
     {
+        config(['identity.mfa_enabled' => true]);
         $admin = $this->makeAdministrator(RoleCode::SuperAdmin);
         $this->postJson('/api/v1/admin/auth/login', ['email' => $admin->email, 'password' => self::PASSWORD]);
         $this->getJson('/api/v1/admin/auth/mfa/setup');
@@ -175,6 +201,7 @@ final class AuthenticationTest extends TestCase
 
     public function test_non_super_admin_cannot_invite_staff_even_with_valid_mfa_session(): void
     {
+        config(['identity.mfa_enabled' => true]);
         $manager = $this->makeAdministrator(RoleCode::CatalogManager);
         $manager->mfaSetting()->create([
             'secret' => DeterministicTotpAuthenticator::SECRET,

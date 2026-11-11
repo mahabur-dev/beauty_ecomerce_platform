@@ -31,4 +31,16 @@ describe("admin permissions", () => {
       hasPermission(adminWithRole("super_admin"), "identity.staff.manage"),
     ).toBe(true);
   });
+
+  it("grants review moderation access to active admin roles", () => {
+    expect(
+      hasPermission(adminWithRole("catalog_manager"), "reviews.read"),
+    ).toBe(true);
+    expect(
+      hasPermission(adminWithRole("catalog_manager"), "reviews.moderate"),
+    ).toBe(true);
+    expect(
+      hasPermission(adminWithRole("super_admin"), "reviews.moderate"),
+    ).toBe(true);
+  });
 });

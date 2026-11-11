@@ -33,26 +33,21 @@ final class AdminAuthController extends Controller
             throw new IdentityRuleException('Email verification is required.', 403, 'Email verification required');
         }
 
-        /*
-        // [MFA FEATURE - TEMPORARILY DISABLED]
-        // Uncomment this block when re-enabling MFA setup/challenge:
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        Auth::forgetGuards();
-        $request->session()->put((string) config('identity.pending_admin_session_key'), $user->getKey());
+        if ((bool) config('identity.mfa_enabled')) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            Auth::forgetGuards();
+            $request->session()->put((string) config('identity.pending_admin_session_key'), $user->getKey());
 
-        return response()->json([
-            'next' => $user->hasConfirmedMfa() ? 'mfa_challenge' : 'mfa_setup',
-        ], Response::HTTP_ACCEPTED);
-        */
+            return response()->json([
+                'next' => $user->hasConfirmedMfa() ? 'mfa_challenge' : 'mfa_setup',
+            ], Response::HTTP_ACCEPTED);
+        }
 
-        // [DIRECT LOGIN - TEMPORARY BYPASS]
-        $this->completeLogin($request, $user);
+        $this->completeLogin($request, $user, mfaVerified: false);
 
-        return response()->json([
-            'next' => $user->hasConfirmedMfa() ? 'mfa_challenge' : 'mfa_setup',
-        ], Response::HTTP_ACCEPTED);
+        return response()->json(['next' => 'authenticated']);
     }
 
     public function setup(Request $request, BeginMfaEnrollment $begin): JsonResponse
@@ -113,11 +108,17 @@ final class AdminAuthController extends Controller
         return $user;
     }
 
-    private function completeLogin(Request $request, User $user): void
+    private function completeLogin(Request $request, User $user, bool $mfaVerified = true): void
     {
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
         $request->session()->forget((string) config('identity.pending_admin_session_key'));
-        $request->session()->put((string) config('identity.mfa_verified_session_key'), now()->getTimestamp());
+
+        $mfaSessionKey = (string) config('identity.mfa_verified_session_key');
+        if ($mfaVerified) {
+            $request->session()->put($mfaSessionKey, now()->getTimestamp());
+        } else {
+            $request->session()->forget($mfaSessionKey);
+        }
     }
 }

@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
-import { AuthCard, AuthPage, RegisterForm } from "@/features/auth";
+import {
+  AuthCard,
+  AuthPage,
+  AuthRouteFallback,
+  RegisterForm,
+} from "@/features/auth";
+import { buildAuthHrefWithNext } from "@/features/auth/utils";
 
 export const metadata: Metadata = {
   title: "Create account",
@@ -9,7 +16,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RegisterPage() {
+interface RegisterPageProps {
+  searchParams: Promise<{ next?: string | string[] }>;
+}
+
+export default function RegisterPage({ searchParams }: RegisterPageProps) {
+  return (
+    <Suspense fallback={<AuthRouteFallback />}>
+      <RegisterContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function RegisterContent({ searchParams }: RegisterPageProps) {
+  const params = await searchParams;
+  const nextPath = Array.isArray(params.next) ? params.next[0] : params.next;
+  const loginHref = buildAuthHrefWithNext("/login", nextPath);
+
   return (
     <AuthPage>
       <AuthCard
@@ -20,7 +43,7 @@ export default function RegisterPage() {
           <p className="text-ink-muted">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href={loginHref}
               className="text-brand-700 font-semibold underline-offset-4 hover:underline"
             >
               Sign in
@@ -28,7 +51,7 @@ export default function RegisterPage() {
           </p>
         }
       >
-        <RegisterForm />
+        <RegisterForm nextPath={nextPath} />
       </AuthCard>
     </AuthPage>
   );

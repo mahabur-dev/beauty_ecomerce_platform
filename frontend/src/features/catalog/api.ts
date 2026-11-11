@@ -32,8 +32,12 @@ export function getProduct(
   );
 }
 
-export function getCategories(): Promise<PaginatedResponse<CatalogCategory>> {
-  return apiRequest("/categories?per_page=100", publicRequestOptions);
+export function getCategories(
+  page = 1,
+): Promise<PaginatedResponse<CatalogCategory>> {
+  const path =
+    page > 1 ? `/categories?per_page=100&page=${page}` : "/categories?per_page=100";
+  return apiRequest(path, publicRequestOptions);
 }
 
 export function getCategory(

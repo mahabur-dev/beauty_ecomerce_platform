@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import Image from "next/image";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@/components/ui/icon";
 import { PermissionGate } from "@/features/auth/components/permission-gate";
 import {
   createCategory,
   deleteCategory,
+  deleteCategoryImage,
   slugify,
   updateCategory,
+  uploadCategoryImage,
   type CategoryInput,
 } from "@/features/catalog/api";
 import type { Category, CategoryStatus } from "@/features/catalog/contracts";
@@ -40,15 +43,23 @@ import {
 } from "./catalog-ui";
 
 const PAGE_SIZE = 6;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
+const MAX_CATEGORY_IMAGE_BYTES = 10 * 1024 * 1024;
 const categoryStatusOptions = [
   { value: "all", label: "All statuses" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ] as const;
-const glyphs = ["🧴", "💄", "🌸", "🫧", "🌿", "✨", "🎨", "💧", "🌹"];
 
-function categoryGlyph(category: Pick<Category, "id">): string {
-  return glyphs[category.id % glyphs.length] ?? "✨";
+interface CategorySubmission {
+  input: Omit<CategoryInput, "imageFile">;
+  imageFile: File | null;
+  removeImage: boolean;
 }
 
 function CategoryForm({
@@ -66,7 +77,7 @@ function CategoryForm({
   isSaving: boolean;
   requestError: string;
   onClose: () => void;
-  onSave: (input: CategoryInput) => void;
+  onSave: (submission: CategorySubmission) => void;
 }) {
   const [name, setName] = useState(current?.name ?? "");
   const [slug, setSlug] = useState(current?.slug ?? "");
@@ -79,8 +90,49 @@ function CategoryForm({
   const [status, setStatus] = useState<CategoryStatus>(
     current?.status ?? "active",
   );
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [removeExistingImage, setRemoveExistingImage] = useState(false);
   const [validationError, setValidationError] = useState("");
   const title = parentMode ? "category" : "subcategory";
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const activeImageUrl =
+    previewUrl ?? (!removeExistingImage ? (current?.image?.url ?? null) : null);
+
+  function handleImageSelect(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setValidationError(
+        "Choose a JPG, PNG, WEBP, or AVIF image for this category.",
+      );
+      return;
+    }
+    if (file.size > MAX_CATEGORY_IMAGE_BYTES) {
+      setValidationError("Category image must not exceed 10 MB.");
+      return;
+    }
+
+    setValidationError("");
+    setImageFile(file);
+    setRemoveExistingImage(false);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleClearImage() {
+    setImageFile(null);
+    setPreviewUrl(null);
+    setRemoveExistingImage(true);
+    setValidationError("");
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -95,13 +147,17 @@ function CategoryForm({
     }
     setValidationError("");
     onSave({
-      name: name.trim(),
-      slug: normalizedSlug,
-      description: description.trim() || null,
-      status,
-      ...(parentMode || (current && current.parent_id === Number(parentId))
-        ? {}
-        : { category_id: Number(parentId) }),
+      input: {
+        name: name.trim(),
+        slug: normalizedSlug,
+        description: description.trim() || null,
+        status,
+        ...(parentMode || (current && current.parent_id === Number(parentId))
+          ? {}
+          : { category_id: Number(parentId) }),
+      },
+      imageFile,
+      removeImage: removeExistingImage,
     });
   }
 
@@ -179,6 +235,60 @@ function CategoryForm({
             placeholder="Short description for this collection"
           />
         </Field>
+        <Field
+          label="Category image (optional)"
+          hint="Uploads a single image to Cloudinary (JPG, PNG, WEBP, AVIF, max 10 MB)."
+        >
+          <div className="catalog-gallery-uploader">
+            <div className="catalog-gallery-grid">
+              {activeImageUrl ? (
+                <div className="catalog-gallery-tile">
+                  <Image
+                    unoptimized
+                    width={90}
+                    height={90}
+                    src={activeImageUrl}
+                    alt={name || "Category preview"}
+                  />
+                  <button
+                    type="button"
+                    className="catalog-gallery-remove"
+                    title="Remove image"
+                    aria-label="Remove category image"
+                    disabled={isSaving}
+                    onClick={handleClearImage}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
+
+              <label
+                className="catalog-gallery-add-button"
+                title={activeImageUrl ? "Replace image" : "Upload image"}
+              >
+                <Icon name="layers" size={20} />
+                <span>{activeImageUrl ? "Replace image" : "+ Add image"}</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  disabled={isSaving}
+                  onChange={handleImageSelect}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            <div className="catalog-gallery-counter">
+              <span>
+                {activeImageUrl
+                  ? imageFile
+                    ? `Selected: ${imageFile.name}`
+                    : "Current Cloudinary image attached."
+                  : "No image attached yet."}
+              </span>
+            </div>
+          </div>
+        </Field>
         {(validationError || requestError) && (
           <DismissibleNotice
             variant="error"
@@ -225,8 +335,18 @@ export function CategoryDetailModal({
     >
       <div className="catalog-detail-container">
         <div className="catalog-detail-header">
-          <div className="catalog-detail-avatar">
-            <span>{categoryGlyph(category)}</span>
+          <div className="catalog-detail-avatar-product">
+            {category.image?.url ? (
+              <Image
+                unoptimized
+                width={56}
+                height={56}
+                src={category.image.url}
+                alt={category.name}
+              />
+            ) : (
+              <Icon name="layers" size={24} />
+            )}
           </div>
           <h3 className="catalog-detail-title">{category.name}</h3>
           <div className="catalog-detail-header-meta-row">
@@ -354,10 +474,20 @@ export function CategoryManagement({
       : parents;
 
   const saveMutation = useMutation({
-    mutationFn: (input: CategoryInput) => {
-      return editing && editing !== "new"
-        ? updateCategory(mode, editing.id, input)
-        : createCategory(mode, input);
+    mutationFn: async ({ input, imageFile, removeImage }: CategorySubmission) => {
+      if (editing === "new") {
+        return createCategory(mode, { ...input, imageFile });
+      }
+      if (!editing) throw new Error("No category selected.");
+
+      let saved = await updateCategory(mode, editing.id, input);
+      if (imageFile) {
+        saved = await uploadCategoryImage(mode, editing.id, imageFile);
+      } else if (removeImage && editing.image) {
+        saved = await deleteCategoryImage(mode, editing.id);
+      }
+
+      return saved;
     },
     onSuccess: async (saved) => {
       await invalidateCategoryCatalog(queryClient);
@@ -495,7 +625,10 @@ export function CategoryManagement({
                   <tr key={item.id}>
                     <td>
                       <div className="catalog-name-cell">
-                        <CategoryAvatar emoji={categoryGlyph(item)} />
+                        <CategoryAvatar
+                          imageUrl={item.image?.url}
+                          alt={item.name}
+                        />
                         <div>
                           <strong>{item.name}</strong>
                           <small>{item.description || "No description"}</small>

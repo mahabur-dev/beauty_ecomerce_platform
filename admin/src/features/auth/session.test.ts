@@ -16,8 +16,7 @@ const user: AdminUser = {
 describe("administrator session boundaries", () => {
   it("requires an active, verified administrator", () => {
     expect(isAuthorizedAdmin(user)).toBe(true);
-    // [MFA FEATURE - TEMPORARILY DISABLED]
-    // Restore false assertion when re-enabling MFA:
+    // Session-level MFA enforcement is authoritative in the backend middleware.
     expect(isAuthorizedAdmin({ ...user, mfa_enabled: false })).toBe(true);
     expect(isAuthorizedAdmin({ ...user, is_active: false })).toBe(false);
     expect(isAuthorizedAdmin({ ...user, email_verified: false })).toBe(false);

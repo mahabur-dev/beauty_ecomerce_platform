@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createCategory,
   createProduct,
+  deleteCategoryImage,
   getCatalogOptions,
   getCatalogSummary,
   listCategories,
   listProducts,
   updateProductImage,
+  uploadCategoryImage,
   uploadProductImage,
 } from "./api";
 import {
@@ -412,5 +414,55 @@ describe("catalog API contracts", () => {
     });
     expect(subcategoryResult.id).toBe(8);
     expect(subcategoryResult.parent?.name).toBe("Eye Makeup");
+  });
+
+  it("uploads and deletes single Cloudinary category images", async () => {
+    document.cookie = "XSRF-TOKEN=catalog-token; Path=/";
+    const imagePayload = {
+      url: "https://res.cloudinary.com/demo/image/upload/cat-7.jpg",
+      format: "jpg",
+      bytes: 40960,
+      width: 600,
+      height: 600,
+    };
+    const rawWithImage = {
+      id: 7,
+      parent_id: null,
+      name: "Skin Care",
+      slug: "skin-care",
+      description: null,
+      status: "active",
+      sort_order: 0,
+      image: imagePayload,
+      children_count: 0,
+      deleted_at: null,
+      created_at: "2026-11-11T00:00:00.000000Z",
+      updated_at: "2026-11-11T00:00:00.000000Z",
+    };
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ data: rawWithImage }, 201))
+      .mockResolvedValueOnce(jsonResponse({ data: rawWithImage }))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: { ...rawWithImage, image: null } }),
+      );
+
+    const file = new File(["img"], "category.jpg", { type: "image/jpeg" });
+    const created = await createCategory("categories", {
+      name: "Skin Care",
+      slug: "skin-care",
+      description: null,
+      status: "active",
+      imageFile: file,
+    });
+    expect(created.image?.url).toBe(imagePayload.url);
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
+
+    const replaced = await uploadCategoryImage("categories", 7, file);
+    expect(replaced.image?.format).toBe("jpg");
+
+    const cleared = await deleteCategoryImage("categories", 7);
+    expect(cleared.image).toBeNull();
   });
 });
