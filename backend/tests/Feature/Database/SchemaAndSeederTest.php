@@ -39,6 +39,19 @@ final class SchemaAndSeederTest extends TestCase
             'width',
             'height',
         ]));
+
+        $this->assertTrue(Schema::hasColumns('categories', [
+            'image_storage_disk',
+            'image_storage_path',
+            'image_asset_id',
+            'image_resource_type',
+            'image_delivery_type',
+            'image_url',
+            'image_format',
+            'image_bytes',
+            'image_width',
+            'image_height',
+        ]));
     }
 
     public function test_deterministic_seeders_are_idempotent_and_never_create_an_admin(): void

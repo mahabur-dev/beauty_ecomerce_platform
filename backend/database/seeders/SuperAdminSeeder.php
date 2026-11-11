@@ -25,9 +25,17 @@ final class SuperAdminSeeder extends Seeder
             ['name' => 'Customer']
         );
 
-        $email = mb_strtolower(trim((string) env('SUPER_ADMIN_EMAIL', 'mahabur1814031@gmail.com')));
-        $name = trim((string) env('SUPER_ADMIN_NAME', 'Super Administrator'));
-        $password = (string) env('SUPER_ADMIN_PASSWORD', 'Mahabur1814031#');
+        $email = mb_strtolower(trim((string) config('identity.super_admin.email')));
+        $name = trim((string) config('identity.super_admin.name'));
+        $password = (string) config('identity.super_admin.password');
+
+        if ($email === '' || $name === '' || $password === '') {
+            $this->command?->warn(
+                'Super administrator seeding skipped. Use identity:provision-super-admin or configure all SUPER_ADMIN_* values.'
+            );
+
+            return;
+        }
 
         DB::transaction(function () use ($email, $name, $password, $role, $customerRole): void {
             $user = User::query()->firstOrNew(['email' => $email]);
@@ -47,4 +55,3 @@ final class SuperAdminSeeder extends Seeder
         $this->command?->info("Super administrator [{$email}] successfully seeded/updated.");
     }
 }
-

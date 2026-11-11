@@ -5,11 +5,16 @@ namespace App\Providers;
 use App\Domain\Identity\Contracts\TotpAuthenticator;
 use App\Domain\Identity\Services\OtpPhpTotpAuthenticator;
 use App\Domain\Media\Contracts\MediaStorage;
+use App\Domain\Review\Contracts\ReviewMediaStorage;
+use App\Domain\Review\Models\ProductReview;
 use App\Infrastructure\Media\CloudinaryMediaStorage;
+use App\Infrastructure\Media\CloudinaryReviewMediaStorage;
+use App\Policies\ProductReviewPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -23,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(TotpAuthenticator::class, OtpPhpTotpAuthenticator::class);
         $this->app->bind(MediaStorage::class, CloudinaryMediaStorage::class);
+        $this->app->bind(ReviewMediaStorage::class, CloudinaryReviewMediaStorage::class);
     }
 
     /**
@@ -38,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Model::shouldBeStrict(! $this->app->isProduction());
+
+        Gate::policy(ProductReview::class, ProductReviewPolicy::class);
 
         Password::defaults(fn () => Password::min(12)->letters()->mixedCase()->numbers()->symbols());
 
@@ -68,6 +76,21 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('catalog-write', fn (Request $request) => Limit::perMinute(
             (int) config('catalog.rate_limits.write_per_minute'),
         )->by('catalog-write|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
+
+        RateLimiter::for('review-read', fn (Request $request) => Limit::perMinute(
+            (int) config('reviews.rate_limits.read_per_minute', 120),
+        )->by('review-read|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
+
+        RateLimiter::for('review-write', fn (Request $request) => Limit::perMinute(
+            (int) config('reviews.rate_limits.write_per_minute', 20),
+        )->by('review-write|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
+
+        RateLimiter::for('review-media', fn (Request $request) => Limit::perMinute(
+            (int) config('reviews.rate_limits.media_per_minute', 10),
+        )->by('review-media|'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
         );
     }
 }

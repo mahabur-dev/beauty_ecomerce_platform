@@ -3,6 +3,8 @@
 namespace App\Domain\Catalog\Models;
 
 use App\Domain\Catalog\Enums\ProductStatus;
+use App\Domain\Review\Enums\ReviewStatus;
+use App\Domain\Review\Models\ProductReview;
 use App\Domain\Vendor\Models\Vendor;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -67,6 +69,19 @@ final class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    /** @return HasMany<ProductReview, $this> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /** @return HasMany<ProductReview, $this> */
+    public function approvedReviews(): HasMany
+    {
+        return $this->reviews()
+            ->where('status', ReviewStatus::Approved->value);
     }
 
     /** @return array<string, string> */

@@ -1,10 +1,3 @@
-export interface HomeCategory {
-  name: string;
-  productCount: string;
-  image: string;
-  href: string;
-}
-
 export interface PreviewProduct {
   name: string;
   size: string;
@@ -14,39 +7,6 @@ export interface PreviewProduct {
   image: string;
   href: string;
 }
-
-export const homeCategories: readonly HomeCategory[] = [
-  {
-    name: "Skin Care",
-    productCount: "120+ Products",
-    image: "/images/storefront/category-skin-care.png",
-    href: "/categories/skin-care",
-  },
-  {
-    name: "Hair Care",
-    productCount: "95+ Products",
-    image: "/images/storefront/category-hair-care.png",
-    href: "/categories/hair-care",
-  },
-  {
-    name: "Body Care",
-    productCount: "80+ Products",
-    image: "/images/storefront/category-body-care.png",
-    href: "/categories/body-care",
-  },
-  {
-    name: "Makeup",
-    productCount: "150+ Products",
-    image: "/images/storefront/category-makeup.png",
-    href: "/categories/makeup",
-  },
-  {
-    name: "Health & Wellness",
-    productCount: "90+ Products",
-    image: "/images/storefront/category-wellness.png",
-    href: "/categories/health-wellness",
-  },
-];
 
 export const previewProducts: readonly PreviewProduct[] = [
   {

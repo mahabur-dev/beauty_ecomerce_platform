@@ -61,6 +61,12 @@ const navigation: NavGroup[] = [
     items: [
       { label: "Orders", icon: "cart", comingSoon: true },
       { label: "Customers", icon: "users", comingSoon: true },
+      {
+        label: "Reviews",
+        href: "/dashboard/reviews",
+        icon: "star",
+        permission: "reviews.read",
+      },
       { label: "Promotions", icon: "heart", comingSoon: true },
     ],
   },

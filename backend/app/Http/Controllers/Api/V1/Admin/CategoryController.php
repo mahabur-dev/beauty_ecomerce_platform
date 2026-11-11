@@ -12,10 +12,12 @@ use App\Http\Requests\Api\V1\Admin\Catalog\StoreCategoryRequest;
 use App\Http\Requests\Api\V1\Admin\Catalog\StoreSubcategoryRequest;
 use App\Http\Requests\Api\V1\Admin\Catalog\UpdateCategoryRequest;
 use App\Http\Requests\Api\V1\Admin\Catalog\UpdateSubcategoryRequest;
+use App\Http\Requests\Api\V1\Admin\Catalog\UploadCategoryImageRequest;
 use App\Http\Resources\Api\V1\CategoryResource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
 
 final class CategoryController extends Controller
@@ -37,8 +39,14 @@ final class CategoryController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         /** @var array{name: string, slug: string, description?: string|null, status?: string, sort_order?: int} $attributes */
-        $attributes = $request->validated();
-        $category = $manager->createRoot($actor, $attributes, $request->ip());
+        $attributes = $request->safe()->except(['image']);
+        $image = $request->file('image');
+        $category = $manager->createRoot(
+            $actor,
+            $attributes,
+            $request->ip(),
+            $image instanceof UploadedFile ? $image : null,
+        );
 
         return (new CategoryResource($category->loadCount('children')))
             ->response()->setStatusCode(Response::HTTP_CREATED);
@@ -59,8 +67,42 @@ final class CategoryController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         /** @var array{name?: string, slug?: string, description?: string|null, status?: string, sort_order?: int} $attributes */
-        $attributes = $request->validated();
-        $updated = $manager->updateRoot($actor, $category, $attributes, $request->ip());
+        $attributes = $request->safe()->except(['image', 'remove_image']);
+        $image = $request->file('image');
+        $updated = $manager->updateRoot(
+            $actor,
+            $category,
+            $attributes,
+            $request->ip(),
+            $image instanceof UploadedFile ? $image : null,
+            $request->boolean('remove_image'),
+        );
+
+        return new CategoryResource($updated->loadCount('children'));
+    }
+
+    public function uploadRootImage(
+        UploadCategoryImageRequest $request,
+        Category $category,
+        ManageCategories $manager,
+    ): CategoryResource {
+        /** @var User $actor */
+        $actor = $request->user();
+        /** @var UploadedFile $image */
+        $image = $request->file('image');
+        $updated = $manager->uploadImage($actor, $category, $image, true, $request->ip());
+
+        return new CategoryResource($updated->loadCount('children'));
+    }
+
+    public function destroyRootImage(
+        IndexCatalogEntitiesRequest $request,
+        Category $category,
+        ManageCategories $manager,
+    ): CategoryResource {
+        /** @var User $actor */
+        $actor = $request->user();
+        $updated = $manager->deleteImage($actor, $category, true, $request->ip());
 
         return new CategoryResource($updated->loadCount('children'));
     }
@@ -113,12 +155,14 @@ final class CategoryController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         /** @var array{name: string, slug: string, description?: string|null, status?: string, sort_order?: int} $attributes */
-        $attributes = $request->safe()->except('category_id');
+        $attributes = $request->safe()->except(['category_id', 'image']);
+        $image = $request->file('image');
         $subcategory = $manager->createChild(
             $actor,
             $request->integer('category_id'),
             $attributes,
             $request->ip(),
+            $image instanceof UploadedFile ? $image : null,
         );
 
         return (new CategoryResource($subcategory->load('parent')->loadCount('products')))
@@ -140,14 +184,43 @@ final class CategoryController extends Controller
         /** @var User $actor */
         $actor = $request->user();
         /** @var array{name?: string, slug?: string, description?: string|null, status?: string, sort_order?: int} $attributes */
-        $attributes = $request->safe()->except('category_id');
+        $attributes = $request->safe()->except(['category_id', 'image', 'remove_image']);
+        $image = $request->file('image');
         $updated = $manager->updateChild(
             $actor,
             $subcategory,
             $request->filled('category_id') ? $request->integer('category_id') : null,
             $attributes,
             $request->ip(),
+            $image instanceof UploadedFile ? $image : null,
+            $request->boolean('remove_image'),
         );
+
+        return new CategoryResource($updated->load('parent')->loadCount('products'));
+    }
+
+    public function uploadChildImage(
+        UploadCategoryImageRequest $request,
+        Category $subcategory,
+        ManageCategories $manager,
+    ): CategoryResource {
+        /** @var User $actor */
+        $actor = $request->user();
+        /** @var UploadedFile $image */
+        $image = $request->file('image');
+        $updated = $manager->uploadImage($actor, $subcategory, $image, false, $request->ip());
+
+        return new CategoryResource($updated->load('parent')->loadCount('products'));
+    }
+
+    public function destroyChildImage(
+        IndexCatalogEntitiesRequest $request,
+        Category $subcategory,
+        ManageCategories $manager,
+    ): CategoryResource {
+        /** @var User $actor */
+        $actor = $request->user();
+        $updated = $manager->deleteImage($actor, $subcategory, false, $request->ip());
 
         return new CategoryResource($updated->load('parent')->loadCount('products'));
     }

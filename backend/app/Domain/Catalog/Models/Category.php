@@ -50,12 +50,55 @@ final class Category extends Model
         return $this->hasMany(Product::class, 'primary_category_id');
     }
 
+    public function hasImage(): bool
+    {
+        return $this->image_url !== null && $this->image_storage_path !== null;
+    }
+
+    /** @return array{public_id: string, resource_type: string, delivery_type: string}|null */
+    public function imageLocator(): ?array
+    {
+        if ($this->image_storage_path === null || $this->image_storage_path === '') {
+            return null;
+        }
+
+        return [
+            'public_id' => $this->image_storage_path,
+            'resource_type' => $this->image_resource_type ?? 'image',
+            'delivery_type' => $this->image_delivery_type ?? 'upload',
+        ];
+    }
+
+    /** @return array<string, int|string|null>|null */
+    public function imagePayload(bool $includeBytes = false): ?array
+    {
+        if ($this->image_url === null || $this->image_url === '') {
+            return null;
+        }
+
+        $payload = [
+            'url' => $this->image_url,
+            'format' => $this->image_format,
+            'width' => $this->image_width,
+            'height' => $this->image_height,
+        ];
+
+        if ($includeBytes) {
+            $payload['bytes'] = $this->image_bytes;
+        }
+
+        return $payload;
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'parent_id' => 'integer',
             'sort_order' => 'integer',
+            'image_bytes' => 'integer',
+            'image_width' => 'integer',
+            'image_height' => 'integer',
             'status' => RecordStatus::class,
         ];
     }

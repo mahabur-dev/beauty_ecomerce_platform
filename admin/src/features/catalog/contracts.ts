@@ -4,6 +4,14 @@ export const categoryStatusSchema = z.enum(["active", "inactive"]);
 export const productStatusSchema = z.enum(["draft", "active", "inactive"]);
 
 const nullableString = z.string().nullable();
+export const categoryImageSchema = z.object({
+  url: z.string().url(),
+  format: nullableString.optional(),
+  bytes: z.coerce.number().int().nonnegative().nullable().optional(),
+  width: z.coerce.number().int().nonnegative().nullable().optional(),
+  height: z.coerce.number().int().nonnegative().nullable().optional(),
+});
+
 const categorySummarySchema = z.object({
   id: z.coerce.number().int().positive(),
   parent_id: z.coerce.number().int().positive().nullable(),
@@ -12,6 +20,7 @@ const categorySummarySchema = z.object({
   description: nullableString,
   status: categoryStatusSchema,
   sort_order: z.coerce.number().int().nonnegative().catch(0).default(0),
+  image: categoryImageSchema.nullable().optional(),
   children_count: z.coerce.number().int().nonnegative().optional(),
   products_count: z.coerce.number().int().nonnegative().optional(),
   deleted_at: nullableString,

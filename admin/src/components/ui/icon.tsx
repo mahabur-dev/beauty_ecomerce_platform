@@ -33,7 +33,12 @@ export type IconName =
   | "eye"
   | "eye-off"
   | "check"
-  | "filter";
+  | "filter"
+  | "star"
+  | "message"
+  | "clock"
+  | "film"
+  | "trash";
 
 const paths: Record<IconName, React.ReactNode> = {
   dashboard: (
@@ -196,6 +201,30 @@ const paths: Record<IconName, React.ReactNode> = {
   ),
   check: <polyline points="20 6 9 17 4 12" />,
   filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
+  star: (
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  ),
+  message: (
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+    </>
+  ),
+  film: (
+    <>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m10 9 5 3-5 3V9Z" />
+    </>
+  ),
+  trash: (
+    <>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </>
+  ),
 };
 
 export function Icon({

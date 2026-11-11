@@ -38,6 +38,7 @@ async function VerifyEmailContent({ searchParams }: VerifyEmailPageProps) {
   const hash = first(params.hash);
   const expires = first(params.expires);
   const signature = first(params.signature);
+  const nextPath = first(params.next);
   const verification =
     id && hash && expires && signature
       ? { id, hash, expires, signature }
@@ -50,7 +51,7 @@ async function VerifyEmailContent({ searchParams }: VerifyEmailPageProps) {
         title="Verify your email"
         description="Email verification protects your account and confirms where we should reach you."
       >
-        <VerifyEmailPanel verification={verification} />
+        <VerifyEmailPanel verification={verification} nextPath={nextPath} />
       </AuthCard>
     </AuthPage>
   );

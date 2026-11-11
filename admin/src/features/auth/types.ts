@@ -1,5 +1,8 @@
 export type AdminRole = "super_admin" | "catalog_manager";
-export type AuthenticationNextStep = "mfa_setup" | "mfa_challenge";
+export type AuthenticationNextStep =
+  | "authenticated"
+  | "mfa_setup"
+  | "mfa_challenge";
 
 export interface AdminUser {
   id: number;

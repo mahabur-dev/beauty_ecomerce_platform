@@ -129,7 +129,7 @@ All public and administrative endpoints are versioned under `/api/v1`:
 
 1. **Stateful Session Cookies:** The API utilizes Laravel Sanctum with `HttpOnly`, `SameSite=Lax`, and `Secure` cookies. Access tokens are never exposed to browser `localStorage` or `sessionStorage`.
 2. **Reverse Proxy Trust:** Configured with `$middleware->trustProxies(at: '*')` to ensure SSL headers (`X-Forwarded-Proto: https`) forwarded by Railway or Cloudflare are properly trusted.
-3. **Mandatory Staff MFA:** All administrative accounts require Time-based One-Time Password (TOTP) enrollment. Direct administrative access without MFA is rejected at the middleware boundary.
+3. **Feature-gated Staff MFA:** Administrative TOTP enrollment and challenge enforcement are controlled by `ADMIN_MFA_ENABLED`. It defaults to `false`; set it to `true` to require MFA at the middleware boundary.
 4. **RFC 9457 Problem Details:** All API exceptions (validation errors, domain exceptions, unauthorized access) respond with standard JSON `application/problem+json` schemas.
 
 ---

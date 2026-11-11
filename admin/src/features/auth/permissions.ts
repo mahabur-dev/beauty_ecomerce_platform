@@ -6,6 +6,8 @@ export type Permission =
   | "catalog.products.read"
   | "catalog.products.write"
   | "catalog.global-data.write"
+  | "reviews.read"
+  | "reviews.moderate"
   | "identity.staff.manage"
   | "audit.read";
 
@@ -16,6 +18,8 @@ const rolePermissions: Readonly<Record<AdminRole, ReadonlySet<Permission>>> = {
     "catalog.products.read",
     "catalog.products.write",
     "catalog.global-data.write",
+    "reviews.read",
+    "reviews.moderate",
     "identity.staff.manage",
     "audit.read",
   ]),
@@ -24,6 +28,8 @@ const rolePermissions: Readonly<Record<AdminRole, ReadonlySet<Permission>>> = {
     "catalog.categories.write",
     "catalog.products.read",
     "catalog.products.write",
+    "reviews.read",
+    "reviews.moderate",
   ]),
 };
 

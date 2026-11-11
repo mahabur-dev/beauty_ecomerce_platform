@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\Admin\InvitationController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductVariantController;
+use App\Http\Controllers\Api\V1\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Api\V1\Admin\ReviewReplyController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
@@ -18,6 +20,9 @@ use App\Http\Controllers\Api\V1\Catalog\PublicCatalogMetadataController;
 use App\Http\Controllers\Api\V1\Catalog\PublicCategoryController;
 use App\Http\Controllers\Api\V1\Catalog\PublicProductController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\Review\CustomerReviewController;
+use App\Http\Controllers\Api\V1\Review\CustomerReviewMediaController;
+use App\Http\Controllers\Api\V1\Review\PublicReviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -32,8 +37,39 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/brands/{slug}', [PublicCatalogMetadataController::class, 'brand']);
     Route::get('/products', [PublicProductController::class, 'index']);
     Route::get('/products/{slug}', [PublicProductController::class, 'show']);
+    Route::middleware('throttle:review-read')->group(function (): void {
+        Route::get('/products/{slug}/reviews', [PublicReviewController::class, 'index']);
+        Route::get('/products/{slug}/reviews/summary', [PublicReviewController::class, 'summary']);
+    });
     Route::get('/catalog/grouped', GroupedCatalogController::class);
     Route::get('/catalog/facets', [PublicCatalogMetadataController::class, 'facets']);
+
+    Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
+        Route::middleware('throttle:review-read')->group(function (): void {
+            Route::get('/reviews/me', [CustomerReviewController::class, 'index']);
+            Route::get('/reviews/{review}', [CustomerReviewController::class, 'show'])->whereNumber('review');
+            Route::get('/reviews/{review}/media/{media}/url', [CustomerReviewMediaController::class, 'signedUrl'])
+                ->whereNumber(['review', 'media']);
+        });
+
+        Route::middleware('throttle:review-write')->group(function (): void {
+            Route::post('/products/{slug}/reviews', [CustomerReviewController::class, 'store']);
+            Route::patch('/reviews/{review}', [CustomerReviewController::class, 'update'])->whereNumber('review');
+            Route::delete('/reviews/{review}', [CustomerReviewController::class, 'destroy'])->whereNumber('review');
+            Route::delete('/reviews/{review}/media/intents/{token}', [CustomerReviewMediaController::class, 'cancelIntent'])
+                ->whereNumber('review')
+                ->whereUuid('token');
+            Route::post('/reviews/{review}/media/finalize', [CustomerReviewMediaController::class, 'finalize'])
+                ->whereNumber('review');
+            Route::delete('/reviews/{review}/media/{media}', [CustomerReviewMediaController::class, 'destroy'])
+                ->whereNumber(['review', 'media']);
+        });
+
+        Route::middleware('throttle:review-media')->group(function (): void {
+            Route::post('/reviews/{review}/media/intents', [CustomerReviewMediaController::class, 'createIntent'])
+                ->whereNumber('review');
+        });
+    });
 
     Route::prefix('auth')->group(function (): void {
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:authentication');
@@ -84,18 +120,30 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/catalog/summary', [CatalogOverviewController::class, 'summary']);
                 Route::get('/catalog/options', [CatalogOverviewController::class, 'options']);
+
+                Route::get('/reviews', [AdminReviewController::class, 'index']);
+                Route::get('/reviews/{review}', [AdminReviewController::class, 'show'])->whereNumber('review');
             });
 
             Route::middleware('throttle:catalog-write')->group(function (): void {
+                Route::post('/reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->whereNumber('review');
+                Route::post('/reviews/{review}/reply', [ReviewReplyController::class, 'store'])->whereNumber('review');
+                Route::patch('/reviews/{review}/reply', [ReviewReplyController::class, 'update'])->whereNumber('review');
+                Route::put('/reviews/{review}/reply', [ReviewReplyController::class, 'upsert'])->whereNumber('review');
+                Route::delete('/reviews/{review}/reply', [ReviewReplyController::class, 'destroy'])->whereNumber('review');
                 Route::post('/categories', [CategoryController::class, 'storeRoot']);
                 Route::post('/categories/{category}/restore', [CategoryController::class, 'restoreRoot']);
                 Route::patch('/categories/{category}', [CategoryController::class, 'updateRoot']);
                 Route::delete('/categories/{category}', [CategoryController::class, 'destroyRoot']);
+                Route::post('/categories/{category}/image', [CategoryController::class, 'uploadRootImage']);
+                Route::delete('/categories/{category}/image', [CategoryController::class, 'destroyRootImage']);
 
                 Route::post('/subcategories', [CategoryController::class, 'storeChild']);
                 Route::post('/subcategories/{subcategory}/restore', [CategoryController::class, 'restoreChild']);
                 Route::patch('/subcategories/{subcategory}', [CategoryController::class, 'updateChild']);
                 Route::delete('/subcategories/{subcategory}', [CategoryController::class, 'destroyChild']);
+                Route::post('/subcategories/{subcategory}/image', [CategoryController::class, 'uploadChildImage']);
+                Route::delete('/subcategories/{subcategory}/image', [CategoryController::class, 'destroyChildImage']);
 
                 Route::post('/products', [ProductController::class, 'store']);
                 Route::post('/products/{product}/restore', [ProductController::class, 'restore']);

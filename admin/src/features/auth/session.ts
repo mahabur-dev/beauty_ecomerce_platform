@@ -4,9 +4,6 @@ export function isAuthorizedAdmin(user: AdminUser): boolean {
   return (
     user.is_active &&
     user.email_verified &&
-    // [MFA FEATURE - TEMPORARILY DISABLED]
-    // Uncomment when re-enabling MFA:
-    // user.mfa_enabled &&
     user.roles.some(
       (role) => role === "super_admin" || role === "catalog_manager",
     )

@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Api\V1\Admin\Catalog;
 
+use App\Http\Requests\Concerns\ValidatesImageUpload;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class UploadProductImageRequest extends FormRequest
 {
+    use ValidatesImageUpload;
+
     public function authorize(): bool
     {
         return true;
@@ -15,7 +18,7 @@ final class UploadProductImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:'.config('media.image_max_kilobytes')],
+            'image' => $this->imageUploadRules(),
             'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
             'alt_text' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],

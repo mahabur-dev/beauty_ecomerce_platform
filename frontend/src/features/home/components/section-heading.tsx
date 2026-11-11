@@ -4,8 +4,8 @@ import Link from "next/link";
 
 interface SectionHeadingProps {
   title: string;
-  actionLabel: string;
-  actionHref: Route | string;
+  actionLabel?: string | undefined;
+  actionHref?: Route | string | undefined;
 }
 
 export function SectionHeading({
@@ -18,13 +18,15 @@ export function SectionHeading({
       <h2 className="text-ink text-2xl font-extrabold tracking-tight sm:text-3xl">
         {title}
       </h2>
-      <Link
-        href={actionHref as Route}
-        className="text-brand-600 hover:text-brand-700 inline-flex items-center gap-2 text-sm font-bold transition"
-      >
-        <span className="hidden sm:inline">{actionLabel}</span>
-        <ArrowRight className="size-4" aria-hidden="true" />
-      </Link>
+      {actionLabel && actionHref ? (
+        <Link
+          href={actionHref as Route}
+          className="text-brand-600 hover:text-brand-700 inline-flex items-center gap-2 text-sm font-bold transition"
+        >
+          <span className="hidden sm:inline">{actionLabel}</span>
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      ) : null}
     </div>
   );
 }

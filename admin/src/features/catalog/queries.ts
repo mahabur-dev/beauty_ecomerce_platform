@@ -5,7 +5,7 @@ import {
   useQuery,
   type QueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
   getCatalogOptions,
   getCatalogSummary,
@@ -13,6 +13,8 @@ import {
   listProducts,
   type ListParams,
 } from "./api";
+
+export { useDebouncedValue };
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -81,13 +83,4 @@ export async function invalidateCategoryCatalog(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: catalogKeys.summary() }),
     queryClient.invalidateQueries({ queryKey: catalogKeys.productLists() }),
   ]);
-}
-
-export function useDebouncedValue<T>(value: T, delay = 300): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setDebounced(value), delay);
-    return () => window.clearTimeout(timeout);
-  }, [value, delay]);
-  return debounced;
 }

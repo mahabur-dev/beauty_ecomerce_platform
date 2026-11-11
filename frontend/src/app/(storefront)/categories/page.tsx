@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
-import { buttonStyles, Container, Skeleton } from "@/components/ui";
+import { Container, Skeleton } from "@/components/ui";
 import { CatalogPageHeader, CategoryDirectory } from "@/features/catalog";
 
 export const metadata: Metadata = {
@@ -19,14 +18,6 @@ export default function CategoriesPage() {
         description="Move from broad routines to focused product collections in just a few steps."
       />
       <Container className="py-10 sm:py-14">
-        <div className="mb-7 flex justify-end">
-          <Link
-            href="/catalog"
-            className={buttonStyles({ variant: "outline" })}
-          >
-            Explore grouped collections
-          </Link>
-        </div>
         <Suspense fallback={<DirectorySkeleton />}>
           <CategoryDirectory />
         </Suspense>
@@ -37,9 +28,16 @@ export default function CategoriesPage() {
 
 function DirectorySkeleton() {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }, (_, index) => (
-        <Skeleton key={index} className="h-72 rounded-2xl" />
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {Array.from({ length: 10 }, (_, index) => (
+        <div
+          key={index}
+          className="border-brand-100 bg-surface-elevated overflow-hidden rounded-2xl border p-3"
+        >
+          <Skeleton className="aspect-[1.12] w-full rounded-xl" />
+          <Skeleton className="mx-auto mt-3 h-4 w-3/4 rounded" />
+          <Skeleton className="mx-auto mt-2 h-3 w-1/2 rounded" />
+        </div>
       ))}
     </div>
   );

@@ -4,13 +4,14 @@ namespace App\Http\Requests\Api\V1\Admin\Catalog;
 
 use App\Domain\Shared\Enums\RecordStatus;
 use App\Http\Requests\Concerns\NormalizesSlug;
+use App\Http\Requests\Concerns\ValidatesImageUpload;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 final class StoreSubcategoryRequest extends FormRequest
 {
-    use NormalizesSlug;
+    use NormalizesSlug, ValidatesImageUpload;
 
     public function authorize(): bool
     {
@@ -36,6 +37,7 @@ final class StoreSubcategoryRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:10000'],
             'status' => ['sometimes', Rule::enum(RecordStatus::class)],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
+            'image' => $this->imageUploadRules(false),
         ];
     }
 

@@ -7,4 +7,3 @@ export * from "./product-catalog";
 export * from "./product-detail-view";
 export * from "./product-gallery";
 export * from "./product-purchase-box";
-export * from "./product-reviews";

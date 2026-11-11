@@ -8,6 +8,7 @@ import {
   AuthRouteFallback,
   LoginForm,
 } from "@/features/auth";
+import { buildAuthHrefWithNext } from "@/features/auth/utils";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -30,6 +31,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 async function LoginContent({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextPath = Array.isArray(params.next) ? params.next[0] : params.next;
+  const registerHref = buildAuthHrefWithNext("/register", nextPath);
 
   return (
     <AuthPage>
@@ -41,7 +43,7 @@ async function LoginContent({ searchParams }: LoginPageProps) {
           <p className="text-ink-muted">
             New to GlowCare?{" "}
             <Link
-              href="/register"
+              href={registerHref}
               className="text-brand-700 font-semibold underline-offset-4 hover:underline"
             >
               Create an account

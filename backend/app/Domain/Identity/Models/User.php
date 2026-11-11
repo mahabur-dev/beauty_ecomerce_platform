@@ -5,6 +5,7 @@ namespace App\Domain\Identity\Models;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Identity\Enums\RoleCode;
 use App\Domain\Identity\Notifications\ResetPasswordNotification;
+use App\Domain\Review\Models\ProductReview;
 use App\Domain\Vendor\Models\Vendor;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -57,6 +58,18 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function mfaRecoveryCodes(): HasMany
     {
         return $this->hasMany(MfaRecoveryCode::class);
+    }
+
+    /** @return HasMany<ProductReview, $this> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /** @return HasMany<ProductReview, $this> */
+    public function moderatedReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class, 'moderated_by_user_id');
     }
 
     public function hasRole(RoleCode|string $role): bool

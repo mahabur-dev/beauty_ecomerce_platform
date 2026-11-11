@@ -1,3 +1,11 @@
+import { notFound } from "next/navigation";
+
+// /catalog route is temporarily disabled and returns 404.
+export default function CatalogPage() {
+  notFound();
+}
+
+/*
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -47,3 +55,4 @@ function GroupedSkeleton() {
     </div>
   );
 }
+*/

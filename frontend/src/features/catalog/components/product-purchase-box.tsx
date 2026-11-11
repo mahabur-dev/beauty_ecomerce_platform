@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2, Heart, Minus, Plus, ShieldCheck, ShoppingCart, Star, Truck } from "lucide-react";
+import { CheckCircle2, Heart, Minus, Plus, ShieldCheck, ShoppingCart, Truck } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { buttonStyles } from "@/components/ui";
+import { buttonStyles, DismissibleAlert } from "@/components/ui";
 import type { CatalogProductDetail } from "@/features/catalog/types";
+import { ProductRatingOverview } from "@/features/reviews";
 import { cn } from "@/lib/utils/cn";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -44,14 +45,6 @@ export function ProductPurchaseBox({
   const savingsPercent = hasDiscount
     ? Math.round((savingsAmount / oldPriceNum) * 100)
     : 0;
-
-  useEffect(() => {
-    if (!addedNotice) return;
-    const timer = setTimeout(() => {
-      setAddedNotice(null);
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, [addedNotice]);
 
   function handleDecrease() {
     setQuantity((prev) => Math.max(1, prev - 1));
@@ -123,26 +116,8 @@ export function ProductPurchaseBox({
         <h1 className="text-ink text-2xl font-extrabold sm:text-3xl lg:text-4xl">
           {product.name}
         </h1>
-        <div className="mt-3 flex items-center gap-3">
-          <div className="flex items-center gap-1 text-amber-500">
-            {Array.from({ length: 5 }, (_, i) => (
-              <Star
-                key={i}
-                className="size-4 fill-amber-400 text-amber-400"
-                aria-hidden="true"
-              />
-            ))}
-            <span className="text-ink ml-1 text-sm font-bold">4.9</span>
-          </div>
-          <span className="text-line" aria-hidden="true">
-            •
-          </span>
-          <a
-            href="#product-reviews"
-            className="text-brand-700 hover:text-brand-800 text-sm font-semibold underline underline-offset-4"
-          >
-            48 customer reviews
-          </a>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ProductRatingOverview productSlug={product.slug} />
           <span className="text-line" aria-hidden="true">
             •
           </span>
@@ -171,23 +146,12 @@ export function ProductPurchaseBox({
 
       {/* Notice feedback if item added to cart */}
       {addedNotice ? (
-        <div
-          role="status"
-          className="border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center justify-between gap-3 rounded-xl border p-3.5 text-sm font-medium animate-in fade-in"
+        <DismissibleAlert
+          tone="success"
+          onDismiss={() => setAddedNotice(null)}
         >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
-            <span>{addedNotice}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAddedNotice(null)}
-            className="hover:text-emerald-950 font-bold"
-            aria-label="Close notification"
-          >
-            ×
-          </button>
-        </div>
+          {addedNotice}
+        </DismissibleAlert>
       ) : null}
 
       {/* Quantity & Action Buttons */}

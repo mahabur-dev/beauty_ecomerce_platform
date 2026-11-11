@@ -2,29 +2,38 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Button, Input } from "@/components/ui";
 
 import { login } from "../api";
 import { authErrorMessage, authFieldErrors } from "../errors";
-import { currentUserQueryKey } from "../hooks";
+import { currentUserQueryKey, useCurrentUser } from "../hooks";
 import { loginSchema, zodFieldErrors, type AuthFieldErrors } from "../schemas";
-import { safeReturnPath } from "../utils";
+import { resolveReferrerReturnPath, safeReturnPath } from "../utils";
 import { FormAlert } from "./form-alert";
 import { PasswordInput } from "./password-input";
 
 export function LoginForm({ nextPath }: { nextPath?: string | undefined }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const currentUserQuery = useCurrentUser();
   const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [formError, setFormError] = useState<string>();
+  const queryNext = searchParams.get("next") ?? undefined;
+  const rawNext = nextPath ?? queryNext;
+
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: (user) => {
       queryClient.setQueryData(currentUserQueryKey, user);
-      router.push(safeReturnPath(nextPath));
+      const referrerPath =
+        typeof window !== "undefined"
+          ? resolveReferrerReturnPath(document.referrer, window.location.origin)
+          : undefined;
+      router.replace(safeReturnPath(rawNext ?? referrerPath));
       router.refresh();
     },
     onError: (error) => {
@@ -32,6 +41,16 @@ export function LoginForm({ nextPath }: { nextPath?: string | undefined }) {
       setFormError(authErrorMessage(error));
     },
   });
+
+  useEffect(() => {
+    if (!mutation.isSuccess && currentUserQuery.data) {
+      const referrerPath = resolveReferrerReturnPath(
+        document.referrer,
+        window.location.origin,
+      );
+      router.replace(safeReturnPath(rawNext ?? referrerPath));
+    }
+  }, [currentUserQuery.data, mutation.isSuccess, rawNext, router]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +74,11 @@ export function LoginForm({ nextPath }: { nextPath?: string | undefined }) {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert>{formError}</FormAlert> : null}
+      {formError ? (
+        <FormAlert onDismiss={() => setFormError(undefined)}>
+          {formError}
+        </FormAlert>
+      ) : null}
       <Input
         label="Email address"
         name="email"

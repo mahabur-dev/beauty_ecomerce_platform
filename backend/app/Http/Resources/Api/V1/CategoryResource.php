@@ -20,6 +20,7 @@ final class CategoryResource extends JsonResource
             'description' => $this->description,
             'status' => (string) $this->getRawOriginal('status'),
             'sort_order' => (int) ($this->sort_order ?? 0),
+            'image' => $this->imagePayload(includeBytes: true),
             'children_count' => $this->whenCounted('children'),
             'products_count' => $this->whenCounted('products'),
             'parent' => new self($this->whenLoaded('parent')),

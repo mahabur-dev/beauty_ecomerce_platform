@@ -55,7 +55,7 @@ final class CrossOriginSessionCookieTest extends TestCase
                 'password' => self::PASSWORD,
             ]);
 
-        $loginResponse->assertAccepted();
+        $loginResponse->assertOk()->assertJsonPath('next', 'authenticated');
         $this->assertSessionCookieAttributes($loginResponse->headers->getCookies(), 'none', true, true);
 
         $sessionCookie = collect($loginResponse->headers->getCookies())
@@ -68,6 +68,42 @@ final class CrossOriginSessionCookieTest extends TestCase
 
         $meResponse->assertOk()
             ->assertJsonPath('data.email', $admin->email);
+        $this->assertSessionCookieAttributes($meResponse->headers->getCookies(), 'none', true, true);
+    }
+
+    public function test_storefront_customer_login_preserves_cross_origin_session_cookies(): void
+    {
+        config([
+            'sanctum.stateful' => ['beauty-ecomerce-platform-4jkf.vercel.app'],
+        ]);
+
+        $customer = $this->makeUser(RoleCode::Customer);
+        $headers = [
+            'Origin' => 'https://beauty-ecomerce-platform-4jkf.vercel.app',
+            'Referer' => 'https://beauty-ecomerce-platform-4jkf.vercel.app/',
+            'Accept' => 'application/json',
+        ];
+
+        $loginResponse = $this->withHeaders($headers)
+            ->postJson('https://glowcare.alwaysdata.net/api/v1/auth/login', [
+                'email' => $customer->email,
+                'password' => self::PASSWORD,
+            ]);
+
+        $loginResponse->assertOk()
+            ->assertJsonPath('data.email', $customer->email);
+        $this->assertSessionCookieAttributes($loginResponse->headers->getCookies(), 'none', true, true);
+
+        $sessionCookie = collect($loginResponse->headers->getCookies())
+            ->first(static fn (Cookie $cookie): bool => $cookie->getName() === config('session.cookie'));
+        self::assertInstanceOf(Cookie::class, $sessionCookie);
+
+        $meResponse = $this->withHeaders($headers)
+            ->withUnencryptedCookie((string) config('session.cookie'), (string) $sessionCookie->getValue())
+            ->getJson('https://glowcare.alwaysdata.net/api/v1/auth/me');
+
+        $meResponse->assertOk()
+            ->assertJsonPath('data.email', $customer->email);
         $this->assertSessionCookieAttributes($meResponse->headers->getCookies(), 'none', true, true);
     }
 
@@ -90,7 +126,7 @@ final class CrossOriginSessionCookieTest extends TestCase
             'password' => self::PASSWORD,
         ]);
 
-        $loginResponse->assertAccepted();
+        $loginResponse->assertOk()->assertJsonPath('next', 'authenticated');
         $this->assertSessionCookieAttributes($loginResponse->headers->getCookies(), 'lax', false, false);
     }
 
@@ -132,4 +168,3 @@ final class CrossOriginSessionCookieTest extends TestCase
         return $user;
     }
 }
-

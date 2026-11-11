@@ -1,27 +1,28 @@
-import { AlertCircle, CheckCircle2 } from "lucide-react";
-
-import { cn } from "@/lib/utils/cn";
+import { DismissibleAlert } from "@/components/ui";
 
 interface FormAlertProps {
   tone?: "error" | "success";
+  durationMs?: number | undefined;
+  dismissible?: boolean | undefined;
+  onDismiss?: (() => void) | undefined;
   children: React.ReactNode;
 }
 
-export function FormAlert({ tone = "error", children }: FormAlertProps) {
-  const Icon = tone === "error" ? AlertCircle : CheckCircle2;
-
+export function FormAlert({
+  tone = "error",
+  durationMs,
+  dismissible,
+  onDismiss,
+  children,
+}: FormAlertProps) {
   return (
-    <div
-      role={tone === "error" ? "alert" : "status"}
-      className={cn(
-        "flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-5",
-        tone === "error"
-          ? "border-red-200 bg-red-50 text-red-800"
-          : "border-emerald-200 bg-emerald-50 text-emerald-800",
-      )}
+    <DismissibleAlert
+      tone={tone}
+      durationMs={durationMs}
+      dismissible={dismissible}
+      onDismiss={onDismiss}
     >
-      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <span>{children}</span>
-    </div>
+      {children}
+    </DismissibleAlert>
   );
 }

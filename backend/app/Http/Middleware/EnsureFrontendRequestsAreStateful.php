@@ -18,4 +18,3 @@ final class EnsureFrontendRequestsAreStateful extends SanctumEnsureFrontendReque
         ]);
     }
 }
-

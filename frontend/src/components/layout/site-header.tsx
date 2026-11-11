@@ -9,7 +9,7 @@ import { HeaderAccount } from "@/features/auth";
 
 export function SiteHeader() {
   return (
-    <header className="relative z-30 bg-[#fff7f7]">
+    <header className="border-line/80 sticky top-0 z-30 border-b bg-[#fff7f7]/95 shadow-xs backdrop-blur-md">
       <div>
         <Container className="flex h-20 items-center gap-3 lg:h-24 lg:gap-5">
           <MobileNavigation />
